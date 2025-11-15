@@ -1,0 +1,6 @@
+{
+    "require": {
+        "php-open-source-saver/jwt-auth": "*",
+        "laravel/sanctum": "*"
+    }
+}
