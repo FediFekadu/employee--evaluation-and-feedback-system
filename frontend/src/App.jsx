@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import api from './services/api';
 import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
+import AdminDashboard from './pages/CollegeAdminDashboard';
 
 function App() {
   const [theme, setTheme] = useState('dark');
+  const navigate = useNavigate();
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
@@ -26,6 +29,21 @@ function App() {
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_role');
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      // Proceed even if API call fails
+    } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_role');
+      }
+      navigate('/login');
+    }
+  };
+
   return (
     <div>
       <header className="navbar">
@@ -36,7 +54,11 @@ function App() {
           </div>
           <nav className="nav-links">
             <Link className="link" to="/">Home</Link>
-            <Link className="btn btn-ghost" to="/login">Login</Link>
+            {isLoggedIn ? (
+              <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
+            ) : (
+              <Link className="btn btn-ghost" to="/login">Login</Link>
+            )}
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
               {theme === 'dark' ? (
                 // Sun icon
@@ -85,6 +107,8 @@ function App() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<StudentDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/superadmin" element={<AdminDashboard />} />
         </Routes>
       </main>
 

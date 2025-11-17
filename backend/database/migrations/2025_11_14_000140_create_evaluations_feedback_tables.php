@@ -41,7 +41,8 @@ return new class extends Migration {
 
         Schema::create('responses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('feedback_id')->constrained()->cascadeOnDelete();
+            // Explicitly reference the correct table name since "feedback" is uncountable
+            $table->foreignId('feedback_id')->constrained('feedbacks')->cascadeOnDelete();
             $table->foreignId('question_id')->constrained()->cascadeOnDelete();
             $table->unsignedTinyInteger('rating')->nullable();
             $table->text('text')->nullable();

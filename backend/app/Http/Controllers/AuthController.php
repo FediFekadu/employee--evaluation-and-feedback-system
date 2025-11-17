@@ -47,12 +47,18 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
-
-        if (!Auth::attempt($credentials)) {
+        // Manually validate credentials to avoid session-guard quirks in API routes
+        $user = User::where('email', $credentials['email'])->first();
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 422);
         }
 
-        $user = $request->user();
+        // Only allow admin role
+        if ($user->role !== 'college_admin') {
+            return response()->json(['message' => 'Unauthorized role'], 403);
+        }
+
+        Auth::login($user);
         return response()->json(['user' => $user]);
     }
 

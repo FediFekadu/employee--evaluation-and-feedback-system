@@ -19,8 +19,13 @@ return [
 
     'allowed_methods' => ['*'],
 
-    // Restrict to your Vite dev origin for SPA auth with Sanctum
-    'allowed_origins' => ['http://localhost:5173'],
+    // Allow Vite dev origins for SPA auth with Sanctum
+    'allowed_origins' => [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+    ],
 
     'allowed_origins_patterns' => [],
 
