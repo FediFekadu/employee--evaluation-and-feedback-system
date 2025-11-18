@@ -1,8 +1,77 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../services/api';
 
 function CollegeAdminDashboard() {
   const [active, setActive] = useState('overview');
+  const [departments, setDepartments] = useState([]);
+  const [deptLoading, setDeptLoading] = useState(false);
+  const [deptError, setDeptError] = useState('');
+  const [newDeptName, setNewDeptName] = useState('');
+  const [newDeptCode, setNewDeptCode] = useState('');
+  const [editingDeptId, setEditingDeptId] = useState(null);
+  const [deptEditForm, setDeptEditForm] = useState({ name: '', code: '' });
+  const [selectedDeptId, setSelectedDeptId] = useState('');
+  // Admin creation form state (Department Admins section)
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminName, setAdminName] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  // Admin management state
+  const [admins, setAdmins] = useState([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [adminsError, setAdminsError] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', password: '', department_id: '' });
+
+  useEffect(() => {
+    if (active !== 'departments' && active !== 'admins') return;
+    let mounted = true;
+    setDeptLoading(true);
+    setDeptError('');
+    api
+      .get('/departments')
+      .then((res) => {
+        if (!mounted) return;
+        setDepartments(res.data || []);
+        if (!selectedDeptId && (res.data || []).length) {
+          setSelectedDeptId(String(res.data[0].id));
+        }
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setDeptError('Failed to load departments');
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setDeptLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [active]);
+
+  // Load department admins when viewing the admins tab
+  useEffect(() => {
+    if (active !== 'admins') return;
+    let mounted = true;
+    async function loadAdmins() {
+      setAdminsLoading(true);
+      setAdminsError('');
+      try {
+        const res = await api.get('/department-admins');
+        if (!mounted) return;
+        setAdmins(res.data || []);
+      } catch (e) {
+        if (!mounted) return;
+        setAdminsError('Failed to load department admins');
+      } finally {
+        if (!mounted) return;
+        setAdminsLoading(false);
+      }
+    }
+    loadAdmins();
+    return () => { mounted = false; };
+  }, [active]);
 
   const nav = [
     { key: 'overview', label: 'Overview' },
@@ -78,12 +147,140 @@ function CollegeAdminDashboard() {
           {active === 'departments' && (
             <section className="card">
               <h3>Manage Departments</h3>
-              <p style={{ color: 'var(--muted)' }}>Add, edit, activate/deactivate departments, and assign admins.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button className="btn btn-primary">Add Department</button>
-                <button className="btn btn-ghost">Edit Selected</button>
-                <button className="btn btn-ghost">Assign Admin</button>
-                <button className="btn btn-ghost">Activate/Deactivate</button>
+              <p style={{ color: 'var(--muted)' }}>Add or update departments.</p>
+
+              <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                <div>
+                  <label>Name</label>
+                  <input className="btn btn-ghost" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="e.g., Computer Science" />
+                </div>
+                <div>
+                  <label>Code</label>
+                  <input className="btn btn-ghost" value={newDeptCode} onChange={(e) => setNewDeptCode(e.target.value)} placeholder="e.g., CS" />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    if (!newDeptName || !newDeptCode) return;
+                    try {
+                      const res = await api.post('/departments', { name: newDeptName, code: newDeptCode });
+                      setDepartments((prev) => [res.data, ...prev]);
+                      setNewDeptName('');
+                      setNewDeptCode('');
+                    } catch (e) {
+                      alert('Failed to create department');
+                    }
+                  }}
+                >
+                  Add Department
+                </button>
+              </div>
+              {deptLoading && <p style={{ color: 'var(--muted)', marginTop: 12 }}>Loading departments…</p>}
+              {deptError && <p style={{ color: 'red' }}>{deptError}</p>}
+
+              <div className="card" style={{ marginTop: 16 }}>
+                <h4>Departments List</h4>
+                {deptLoading ? (
+                  <p style={{ color: 'var(--muted)' }}>Loading…</p>
+                ) : (
+                  <table className="table" style={{ width: '100%', marginTop: 8 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left' }}>Name</th>
+                        <th style={{ textAlign: 'left' }}>Code</th>
+                        <th style={{ textAlign: 'left' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {departments.map((d) => (
+                        <tr key={d.id}>
+                          <td>
+                            {editingDeptId === d.id ? (
+                              <input
+                                className="btn btn-ghost"
+                                value={deptEditForm.name}
+                                onChange={(e) => setDeptEditForm((f) => ({ ...f, name: e.target.value }))}
+                              />
+                            ) : (
+                              d.name
+                            )}
+                          </td>
+                          <td>
+                            {editingDeptId === d.id ? (
+                              <input
+                                className="btn btn-ghost"
+                                value={deptEditForm.code}
+                                onChange={(e) => setDeptEditForm((f) => ({ ...f, code: e.target.value }))}
+                              />
+                            ) : (
+                              d.code
+                            )}
+                          </td>
+                          <td style={{ display: 'flex', gap: 8 }}>
+                            {editingDeptId === d.id ? (
+                              <>
+                                <button
+                                  className="btn btn-primary"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await api.put(`/departments/${d.id}`, {
+                                        name: deptEditForm.name,
+                                        code: deptEditForm.code,
+                                      });
+                                      setDepartments((prev) => prev.map((x) => (x.id === d.id ? res.data : x)));
+                                      setEditingDeptId(null);
+                                      setDeptEditForm({ name: '', code: '' });
+                                    } catch (e) {
+                                      alert('Failed to update department');
+                                    }
+                                  }}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={() => {
+                                    setEditingDeptId(null);
+                                    setDeptEditForm({ name: '', code: '' });
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  className="btn btn-primary"
+                                  onClick={() => {
+                                    setEditingDeptId(d.id);
+                                    setDeptEditForm({ name: d.name, code: d.code });
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={async () => {
+                                    const ok = confirm('Delete this department?');
+                                    if (!ok) return;
+                                    try {
+                                      await api.delete(`/departments/${d.id}`);
+                                      setDepartments((prev) => prev.filter((x) => x.id !== d.id));
+                                    } catch (e) {
+                                      alert('Failed to delete department');
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </section>
           )}
@@ -91,12 +288,200 @@ function CollegeAdminDashboard() {
           {active === 'admins' && (
             <section className="card">
               <h3>Department Admins</h3>
-              <p style={{ color: 'var(--muted)' }}>Create, reset passwords, update profiles, and assign permissions.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button className="btn btn-primary">Create Admin</button>
-                <button className="btn btn-ghost">Reset Password</button>
-                <button className="btn btn-ghost">Update Profile</button>
-                <button className="btn btn-ghost">Assign Roles</button>
+              <p style={{ color: 'var(--muted)' }}>Create department admins with default credentials and assign to a department.</p>
+
+              <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                <div>
+                  <label>Department</label>
+                  <select className="btn btn-ghost" value={selectedDeptId} onChange={(e) => setSelectedDeptId(e.target.value)}>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>Admin Email</label>
+                  <input className="btn btn-ghost" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@example.com" />
+                </div>
+                <div>
+                  <label>Admin Name</label>
+                  <input className="btn btn-ghost" value={adminName} onChange={(e) => setAdminName(e.target.value)} placeholder="Full name" />
+                </div>
+                <div>
+                  <label>Default Password</label>
+                  <input className="btn btn-ghost" type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Provide a temporary password" />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    if (!selectedDeptId || !adminEmail || !adminPassword) {
+                      alert('Department, email, and password are required');
+                      return;
+                    }
+                    try {
+                      const res = await api.post(`/departments/${selectedDeptId}/assign-admin`, {
+                        email: adminEmail,
+                        name: adminName || undefined,
+                        password: adminPassword,
+                      });
+                      setAdminEmail('');
+                      setAdminName('');
+                      setAdminPassword('');
+                      // Refresh admins list
+                      try {
+                        const list = await api.get('/department-admins');
+                        setAdmins(list.data || []);
+                      } catch {}
+                      alert(`Department admin created/assigned: ${res.data.user.email}. Share the default credentials to the admin.`);
+                    } catch (e) {
+                      alert('Failed to create/assign department admin');
+                    }
+                  }}
+                >
+                  Create & Assign Department Admin
+                </button>
+              </div>
+
+              {deptLoading && <p style={{ color: 'var(--muted)', marginTop: 12 }}>Loading departments…</p>}
+              {deptError && <p style={{ color: 'red' }}>{deptError}</p>}
+
+              <div className="card" style={{ marginTop: 16 }}>
+                <h4>Assigned Department Admins</h4>
+                {adminsLoading && <p style={{ color: 'var(--muted)' }}>Loading admins…</p>}
+                {adminsError && <p style={{ color: 'red' }}>{adminsError}</p>}
+                {!adminsLoading && !adminsError && (
+                  <table className="table" style={{ width: '100%', marginTop: 8 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left' }}>Name</th>
+                        <th style={{ textAlign: 'left' }}>Email</th>
+                        <th style={{ textAlign: 'left' }}>Department</th>
+                        <th style={{ textAlign: 'left' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {admins.map((a) => (
+                        <tr key={a.id}>
+                          <td>
+                            {editingId === a.id ? (
+                              <input
+                                className="btn btn-ghost"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                              />
+                            ) : (
+                              a.name || '—'
+                            )}
+                          </td>
+                          <td>
+                            {editingId === a.id ? (
+                              <input
+                                className="btn btn-ghost"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                              />
+                            ) : (
+                              a.email
+                            )}
+                          </td>
+                          <td>
+                            {editingId === a.id ? (
+                              <select
+                                className="btn btn-ghost"
+                                value={editForm.department_id}
+                                onChange={(e) => setEditForm((f) => ({ ...f, department_id: e.target.value }))}
+                              >
+                                {departments.map((d) => (
+                                  <option key={d.id} value={String(d.id)}>
+                                    {d.name} ({d.code})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              a.department ? `${a.department.name} (${a.department.code})` : '—'
+                            )}
+                          </td>
+                          <td style={{ display: 'flex', gap: 8 }}>
+                            {editingId === a.id ? (
+                              <>
+                                <input
+                                  className="btn btn-ghost"
+                                  type="password"
+                                  placeholder="New password (optional)"
+                                  value={editForm.password}
+                                  onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                                />
+                                <button
+                                  className="btn btn-primary"
+                                  onClick={async () => {
+                                    try {
+                                      await api.put(`/department-admins/${a.id}`, {
+                                        name: editForm.name || undefined,
+                                        email: editForm.email || undefined,
+                                        password: editForm.password || undefined,
+                                        department_id: editForm.department_id ? Number(editForm.department_id) : undefined,
+                                      });
+                                      setEditingId(null);
+                                      setEditForm({ name: '', email: '', password: '', department_id: '' });
+                                      // Refresh admins list
+                                      const list = await api.get('/department-admins');
+                                      setAdmins(list.data || []);
+                                    } catch (e) {
+                                      alert('Failed to update admin');
+                                    }
+                                  }}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={() => {
+                                    setEditingId(null);
+                                    setEditForm({ name: '', email: '', password: '', department_id: '' });
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  className="btn btn-primary"
+                                  onClick={() => {
+                                    setEditingId(a.id);
+                                    setEditForm({
+                                      name: a.name || '',
+                                      email: a.email || '',
+                                      password: '',
+                                      department_id: String(a.department_id ?? (departments[0]?.id ? String(departments[0]?.id) : '')),
+                                    });
+                                  }}
+                                >
+                                  Edit / Reassign
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={async () => {
+                                    const ok = confirm('Delete this department admin?');
+                                    if (!ok) return;
+                                    try {
+                                      await api.delete(`/department-admins/${a.id}`);
+                                      setAdmins((prev) => prev.filter((x) => x.id !== a.id));
+                                    } catch (e) {
+                                      alert('Failed to delete admin');
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </section>
           )}

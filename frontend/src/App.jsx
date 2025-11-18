@@ -4,6 +4,7 @@ import api from './services/api';
 import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/CollegeAdminDashboard';
+import DepartmentDashboard from './pages/DepartmentDashboard';
 
 function App() {
   const [theme, setTheme] = useState('dark');
@@ -109,6 +110,7 @@ function App() {
           <Route path="/dashboard" element={<StudentDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/superadmin" element={<AdminDashboard />} />
+          <Route path="/department/:id" element={<DepartmentDashboard />} />
         </Routes>
       </main>
 

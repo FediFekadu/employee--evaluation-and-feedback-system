@@ -6,6 +6,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DepartmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,3 +38,16 @@ Route::post('/evaluations', [EvaluationController::class, 'store']);
 Route::get('/evaluations/{evaluation}', [EvaluationController::class, 'show']);
 
 Route::post('/feedbacks', [FeedbackController::class, 'store']);
+
+// Department management
+Route::get('/departments', [DepartmentController::class, 'index']);
+Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+Route::post('/departments', [DepartmentController::class, 'store']);
+Route::put('/departments/{department}', [DepartmentController::class, 'update']);
+Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
+Route::post('/departments/{department}/assign-admin', [DepartmentController::class, 'assignAdmin']);
+
+// Department admins management
+Route::get('/department-admins', [DepartmentController::class, 'listAdmins']);
+Route::put('/department-admins/{user}', [DepartmentController::class, 'updateAdmin']);
+Route::delete('/department-admins/{user}', [DepartmentController::class, 'deleteAdmin']);

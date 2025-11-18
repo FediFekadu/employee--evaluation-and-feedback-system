@@ -42,12 +42,15 @@ function Login() {
       await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
       const res = await api.post('/auth/login', { email, password });
       const role = res?.data?.user?.role;
+      const deptId = res?.data?.user?.department_id;
       if (role) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_role', role);
+          if (deptId) localStorage.setItem('department_id', String(deptId));
         }
       }
       if (role === 'superadmin' || role === 'college_admin') navigate('/admin');
+      else if (role === 'department_admin' && deptId) navigate(`/department/${deptId}`);
       else if (role === 'student') navigate('/dashboard');
       else navigate('/');
     } catch (err) {
