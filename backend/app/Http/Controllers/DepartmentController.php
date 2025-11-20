@@ -15,7 +15,12 @@ class DepartmentController extends Controller
 
     public function show(Department $department)
     {
-        return $department->load(['courses', 'teachers', 'students']);
+        return $department->load([
+            'courses',
+            'courses.teachers',
+            'teachers',
+            'students'
+        ]);
     }
 
     public function store(Request $request)

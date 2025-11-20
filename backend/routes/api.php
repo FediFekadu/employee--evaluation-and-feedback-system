@@ -7,6 +7,7 @@ use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\TeacherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,10 +33,13 @@ Route::post('/auth/logout', [AuthController::class, 'logout']);
 Route::get('/courses', [CourseController::class, 'index']);
 Route::post('/courses', [CourseController::class, 'store']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
+Route::post('/courses/{id}/assign-teacher', [CourseController::class, 'assignTeacher']);
 
 Route::get('/evaluations', [EvaluationController::class, 'index']);
 Route::post('/evaluations', [EvaluationController::class, 'store']);
 Route::get('/evaluations/{evaluation}', [EvaluationController::class, 'show']);
+Route::put('/evaluations/{evaluation}', [EvaluationController::class, 'update']);
+Route::get('/evaluations/{evaluation}/summary', [EvaluationController::class, 'summary']);
 
 Route::post('/feedbacks', [FeedbackController::class, 'store']);
 
@@ -51,3 +55,7 @@ Route::post('/departments/{department}/assign-admin', [DepartmentController::cla
 Route::get('/department-admins', [DepartmentController::class, 'listAdmins']);
 Route::put('/department-admins/{user}', [DepartmentController::class, 'updateAdmin']);
 Route::delete('/department-admins/{user}', [DepartmentController::class, 'deleteAdmin']);
+
+// Teachers (Instructors)
+Route::get('/teachers', [TeacherController::class, 'index']);
+Route::post('/teachers', [TeacherController::class, 'store']);

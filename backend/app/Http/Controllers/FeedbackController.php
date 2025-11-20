@@ -18,6 +18,13 @@ class FeedbackController extends Controller
             'responses.*.rating' => 'nullable|integer|min:1|max:5',
             'responses.*.text' => 'nullable|string',
         ]);
+        // Gate feedback submission by evaluation open window
+        $evaluation = \App\Models\Evaluation::findOrFail($data['evaluation_id']);
+        $today = now()->toDateString();
+        $isOpen = $evaluation->opened_at <= $today && (is_null($evaluation->closed_at) || $evaluation->closed_at >= $today);
+        if (!$isOpen) {
+            return response()->json(['message' => 'Evaluation window is closed'], 422);
+        }
 
         $feedback = Feedback::create([
             'evaluation_id' => $data['evaluation_id'],
