@@ -59,3 +59,4 @@ Route::delete('/department-admins/{user}', [DepartmentController::class, 'delete
 // Teachers (Instructors)
 Route::get('/teachers', [TeacherController::class, 'index']);
 Route::post('/teachers', [TeacherController::class, 'store']);
+Route::get('/teachers/{teacher}', [TeacherController::class, 'show']);

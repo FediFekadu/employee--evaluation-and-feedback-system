@@ -22,22 +22,9 @@ function CollegeAdminDashboard() {
   const [adminsError, setAdminsError] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', password: '', department_id: '' });
-  // Instructors state
-  const [instructors, setInstructors] = useState([]);
-  const [instructorsLoading, setInstructorsLoading] = useState(false);
-  const [instructorsError, setInstructorsError] = useState('');
-  const [showInstructorModal, setShowInstructorModal] = useState(false);
-  const [instructorForm, setInstructorForm] = useState({ name: '', email: '', title: '', department_id: '' });
-  // Courses state
-  const [courses, setCourses] = useState([]);
-  const [coursesLoading, setCoursesLoading] = useState(false);
-  const [coursesError, setCoursesError] = useState('');
-  // Assignment modal state
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assignForm, setAssignForm] = useState({ department_id: '', course_id: '', teacher_id: '', year_level: '1', semester: 'Semester I' });
 
   useEffect(() => {
-    if (active !== 'departments' && active !== 'admins' && active !== 'instructors') return;
+    if (active !== 'departments' && active !== 'admins') return;
     let mounted = true;
     setDeptLoading(true);
     setDeptError('');
@@ -61,52 +48,6 @@ function CollegeAdminDashboard() {
     return () => {
       mounted = false;
     };
-  }, [active]);
-
-  // Load instructors when viewing the instructors tab
-  useEffect(() => {
-    if (active !== 'instructors') return;
-    let mounted = true;
-    async function loadInstructors() {
-      setInstructorsLoading(true);
-      setInstructorsError('');
-      try {
-        const res = await api.get('/teachers');
-        if (!mounted) return;
-        setInstructors(res.data || []);
-      } catch (e) {
-        if (!mounted) return;
-        setInstructorsError('Failed to load instructors');
-      } finally {
-        if (!mounted) return;
-        setInstructorsLoading(false);
-      }
-    }
-    loadInstructors();
-    return () => { mounted = false; };
-  }, [active]);
-
-  // Load courses when viewing the courses tab
-  useEffect(() => {
-    if (active !== 'courses') return;
-    let mounted = true;
-    async function loadCourses() {
-      setCoursesLoading(true);
-      setCoursesError('');
-      try {
-        const res = await api.get('/courses');
-        if (!mounted) return;
-        setCourses(res.data?.data || []);
-      } catch (e) {
-        if (!mounted) return;
-        setCoursesError('Failed to load courses');
-      } finally {
-        if (!mounted) return;
-        setCoursesLoading(false);
-      }
-    }
-    loadCourses();
-    return () => { mounted = false; };
   }, [active]);
 
   // Load department admins when viewing the admins tab
@@ -548,89 +489,13 @@ function CollegeAdminDashboard() {
           {active === 'instructors' && (
             <section className="card">
               <h3>Instructors</h3>
-              <p style={{ color: 'var(--muted)' }}>Create and view instructors across all departments.</p>
+              <p style={{ color: 'var(--muted)' }}>Add, assign to departments, update info, activate/deactivate.</p>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button className="btn btn-primary" onClick={() => setShowInstructorModal(true)}>Add Instructor</button>
+                <button className="btn btn-primary">Add Instructor</button>
+                <button className="btn btn-ghost">Assign to Department</button>
+                <button className="btn btn-ghost">Update Info</button>
+                <button className="btn btn-ghost">Activate/Deactivate</button>
               </div>
-              <div className="card" style={{ marginTop: 12 }}>
-                <h4>All Instructors</h4>
-                {instructorsLoading && <p style={{ color: 'var(--muted)' }}>Loading instructors…</p>}
-                {instructorsError && <p style={{ color: 'red' }}>{instructorsError}</p>}
-                {!instructorsLoading && !instructorsError && (
-                  <table className="table" style={{ width: '100%', marginTop: 8 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: 'left' }}>Name</th>
-                        <th style={{ textAlign: 'left' }}>Email</th>
-                        <th style={{ textAlign: 'left' }}>Title</th>
-                        <th style={{ textAlign: 'left' }}>Department</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(instructors || []).map((t) => (
-                        <tr key={t.id}>
-                          <td>{t.name}</td>
-                          <td>{t.email}</td>
-                          <td>{t.title || '—'}</td>
-                          <td>{t.department ? `${t.department.name} (${t.department.code})` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              {showInstructorModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'grid', placeItems: 'center', zIndex: 20 }}>
-                  <div className="card" style={{ width: 460 }}>
-                    <h3>Add Instructor</h3>
-                    <div style={{ display: 'grid', gap: 8 }}>
-                      <input className="btn btn-ghost" placeholder="Name" value={instructorForm.name} onChange={(e) => setInstructorForm((f) => ({ ...f, name: e.target.value }))} />
-                      <input className="btn btn-ghost" placeholder="Email" value={instructorForm.email} onChange={(e) => setInstructorForm((f) => ({ ...f, email: e.target.value }))} />
-                      <input className="btn btn-ghost" placeholder="Title" value={instructorForm.title} onChange={(e) => setInstructorForm((f) => ({ ...f, title: e.target.value }))} />
-                      <label>
-                        Department
-                        <select className="btn btn-ghost" value={instructorForm.department_id} onChange={(e) => setInstructorForm((f) => ({ ...f, department_id: e.target.value }))}>
-                          <option value="">Select department…</option>
-                          {departments.map((d) => (
-                            <option key={d.id} value={String(d.id)}>{d.name} ({d.code})</option>
-                          ))}
-                        </select>
-                      </label>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button className="btn btn-ghost" onClick={() => setShowInstructorModal(false)}>Cancel</button>
-                        <button
-                          className="btn btn-primary"
-                          onClick={async () => {
-                            if (!instructorForm.name || !instructorForm.email || !instructorForm.department_id) {
-                              alert('Name, email, and department are required');
-                              return;
-                            }
-                            try {
-                              const res = await api.post('/teachers', {
-                                name: instructorForm.name,
-                                email: instructorForm.email,
-                                title: instructorForm.title || undefined,
-                                department_id: Number(instructorForm.department_id),
-                              });
-                              setInstructors((prev) => [res.data, ...prev]);
-                              setInstructorForm({ name: '', email: '', title: '', department_id: '' });
-                              setShowInstructorModal(false);
-                              if (res.data?.default_password) {
-                                alert(`Instructor added. Default password: ${res.data.default_password}`);
-                              }
-                            } catch (e) {
-                              alert('Failed to add instructor');
-                            }
-                          }}
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </section>
           )}
 
@@ -676,17 +541,19 @@ function CollegeAdminDashboard() {
               <h3>Courses</h3>
               <p style={{ color: 'var(--muted)' }}>Add courses, filter, and assign instructors.</p>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                <select className="btn btn-ghost" aria-label="Department filter" value={assignForm.department_id} onChange={(e) => setAssignForm((f) => ({ ...f, department_id: e.target.value }))}>
-                  <option value="">All Departments</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={String(d.id)}>{d.name}</option>
-                  ))}
+                <select className="btn btn-ghost" aria-label="Department filter">
+                  <option>All Departments</option>
+                  <option>Software Engineering</option>
+                  <option>Information Systems</option>
+                  <option>Computer Science</option>
+                  <option>Information Technology</option>
                 </select>
                 <select className="btn btn-ghost" aria-label="Year filter">
                   <option>All Years</option>
-                  {[1,2,3,4,5].map((y) => (
-                    <option key={y}>Year {y}</option>
-                  ))}
+                  <option>Year 1</option>
+                  <option>Year 2</option>
+                  <option>Year 3</option>
+                  <option>Year 4</option>
                 </select>
                 <select className="btn btn-ghost" aria-label="Semester filter">
                   <option>All Semesters</option>
@@ -696,121 +563,13 @@ function CollegeAdminDashboard() {
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button className="btn btn-primary">Add Course</button>
-                <button className="btn btn-ghost" onClick={() => setShowAssignModal(true)}>Assign Instructor</button>
+                <button className="btn btn-ghost">Assign Instructor</button>
                 <button className="btn btn-ghost">Edit Course</button>
                 <button className="btn btn-ghost">Archive</button>
               </div>
               <div className="card" style={{ marginTop: 12 }}>
-                {coursesLoading && <p style={{ color: 'var(--muted)' }}>Loading courses…</p>}
-                {coursesError && <p style={{ color: 'red' }}>{coursesError}</p>}
-                {!coursesLoading && !coursesError && (
-                  <table className="table" style={{ width: '100%' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: 'left' }}>Course</th>
-                        <th style={{ textAlign: 'left' }}>Department</th>
-                        <th style={{ textAlign: 'left' }}>Assigned Instructors</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {courses
-                        .filter((c) => !assignForm.department_id || String(c.department_id) === String(assignForm.department_id))
-                        .map((c) => (
-                        <tr key={c.id}>
-                          <td>{c.title} ({c.code})</td>
-                          <td>{c.department?.name || '-'}</td>
-                          <td>
-                            {(c.teachers || []).length === 0 && <span style={{ color: 'var(--muted)' }}>—</span>}
-                            {(c.teachers || []).length > 0 && (
-                              <ul>
-                                {c.teachers.map((t) => (
-                                  <li key={`${c.id}-${t.id}`}>{t.name} — Year {t?.pivot?.year_level ?? '-'}, {t?.pivot?.semester ?? '-'}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                <p style={{ color: 'var(--muted)' }}>Course list appears here…</p>
               </div>
-              {showAssignModal && (
-                <div className="modal-overlay">
-                  <div className="modal">
-                    <h4>Assign Instructor to Course</h4>
-                    <div style={{ display: 'grid', gap: 8 }}>
-                      <label>
-                        Department
-                        <select className="btn btn-ghost" value={assignForm.department_id} onChange={(e) => setAssignForm((f) => ({ ...f, department_id: e.target.value, course_id: '' }))}>
-                          <option value="">Select department</option>
-                          {departments.map((d) => (
-                            <option key={d.id} value={String(d.id)}>{d.name}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Course
-                        <select className="btn btn-ghost" value={assignForm.course_id} onChange={(e) => setAssignForm((f) => ({ ...f, course_id: e.target.value }))}>
-                          <option value="">Select course</option>
-                          {courses.filter((c) => !assignForm.department_id || String(c.department_id) === String(assignForm.department_id)).map((c) => (
-                            <option key={c.id} value={String(c.id)}>{c.title} ({c.code})</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Instructor
-                        <select className="btn btn-ghost" value={assignForm.teacher_id} onChange={(e) => setAssignForm((f) => ({ ...f, teacher_id: e.target.value }))}>
-                          <option value="">Select instructor</option>
-                          {instructors.filter((t) => !assignForm.department_id || String(t.department_id) === String(assignForm.department_id)).map((t) => (
-                            <option key={t.id} value={String(t.id)}>{t.name}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <label style={{ flex: 1 }}>
-                          Year
-                          <select className="btn btn-ghost" value={assignForm.year_level} onChange={(e) => setAssignForm((f) => ({ ...f, year_level: e.target.value }))}>
-                            {[1,2,3,4,5].map((y) => (
-                              <option key={y} value={String(y)}>Year {y}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label style={{ flex: 1 }}>
-                          Semester
-                          <select className="btn btn-ghost" value={assignForm.semester} onChange={(e) => setAssignForm((f) => ({ ...f, semester: e.target.value }))}>
-                            <option value="Semester I">Semester I</option>
-                            <option value="Semester II">Semester II</option>
-                          </select>
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button className="btn btn-primary" onClick={async () => {
-                          if (!assignForm.course_id || !assignForm.teacher_id) {
-                            alert('Select course and instructor');
-                            return;
-                          }
-                          try {
-                            const res = await api.post(`/courses/${assignForm.course_id}/assign-teacher`, {
-                              teacher_id: Number(assignForm.teacher_id),
-                              year_level: Number(assignForm.year_level),
-                              semester: assignForm.semester,
-                            });
-                            const updated = res.data?.course;
-                            setCourses((prev) => prev.map((c) => c.id === updated.id ? updated : c));
-                            setShowAssignModal(false);
-                            setAssignForm({ department_id: '', course_id: '', teacher_id: '', year_level: '1', semester: 'Semester I' });
-                            alert('Instructor assigned');
-                          } catch (e) {
-                            alert('Failed to assign instructor');
-                          }
-                        }}>Assign</button>
-                        <button className="btn btn-ghost" onClick={() => setShowAssignModal(false)}>Cancel</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </section>
           )}
 

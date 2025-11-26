@@ -15,12 +15,7 @@ class DepartmentController extends Controller
 
     public function show(Department $department)
     {
-        return $department->load([
-            'courses',
-            'courses.teachers',
-            'teachers',
-            'students'
-        ]);
+        return $department->load(['courses', 'teachers', 'students']);
     }
 
     public function store(Request $request)
@@ -31,22 +26,6 @@ class DepartmentController extends Controller
         ]);
         $dept = Department::create($data);
         return response()->json($dept, 201);
-    }
-
-    public function update(Request $request, Department $department)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:departments,code,' . $department->id,
-        ]);
-        $department->update($data);
-        return response()->json($department);
-    }
-
-    public function destroy(Department $department)
-    {
-        $department->delete();
-        return response()->json(['message' => 'Department deleted']);
     }
 
     // Assign or create a department admin for a department

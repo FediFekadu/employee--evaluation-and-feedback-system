@@ -7,6 +7,7 @@ import { Box, Card, CardContent, Tabs, Tab, TextField, Button, Typography, Alert
 function Login() {
   const [tab, setTab] = useState(0);
   const [studentId, setStudentId] = useState('');
+  const [studentPassword, setStudentPassword] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,14 +22,15 @@ function Login() {
     try {
       // Ensure CSRF cookie for Sanctum SPA (cookie endpoint is not under /api)
       await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
-      const res = await api.post('/auth/login/student', { student_id: studentId, name });
+      const res = await api.post('/auth/login/student-password', { student_id: studentId, password: studentPassword });
       const role = res?.data?.user?.role || 'student';
       if (typeof window !== 'undefined') {
         localStorage.setItem('auth_role', role);
+        if (studentId) localStorage.setItem('student_id', String(studentId));
       }
       navigate('/dashboard');
     } catch (err) {
-      setError('Login failed. Check ID and name.');
+      setError('Login failed. Check ID and password.');
     } finally {
       setLoading(false);
     }
@@ -43,14 +45,17 @@ function Login() {
       const res = await api.post('/auth/login', { email, password });
       const role = res?.data?.user?.role;
       const deptId = res?.data?.user?.department_id;
+      const teacherId = res?.data?.user?.teacher_id;
       if (role) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_role', role);
           if (deptId) localStorage.setItem('department_id', String(deptId));
+          if (teacherId) localStorage.setItem('teacher_id', String(teacherId));
         }
       }
       if (role === 'superadmin' || role === 'college_admin') navigate('/admin');
       else if (role === 'department_admin' && deptId) navigate(`/department/${deptId}`);
+      else if (role === 'teacher' && teacherId) navigate('/teacher');
       else if (role === 'student') navigate('/dashboard');
       else navigate('/');
     } catch (err) {
@@ -81,9 +86,10 @@ function Login() {
                 sx={{ mb: 2 }}
               />
               <TextField
-                label="Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                label="Password"
+                type="password"
+                value={studentPassword}
+                onChange={(e) => setStudentPassword(e.target.value)}
                 fullWidth
                 required
                 sx={{ mb: 2 }}
@@ -91,6 +97,9 @@ function Login() {
               <Button type="submit" variant="contained" fullWidth disabled={loading}>
                 {loading ? 'Signing in…' : 'Login as Student'}
               </Button>
+              <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                Default Student Password: student123 (set by department admin)
+              </Typography>
             </Box>
           )}
 
@@ -119,6 +128,7 @@ function Login() {
               </Button>
               <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
                 Default College Admin: admin@college.local / Admin@1234
+                Default Instructor: created via admin panel (password: teacher123)
               </Typography>
             </Box>
           )}

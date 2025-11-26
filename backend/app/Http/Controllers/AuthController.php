@@ -53,8 +53,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 422);
         }
 
-        // Allow college_admin and department_admin roles
-        if (!in_array($user->role, ['college_admin', 'department_admin'])) {
+        // Only allow admin role
+        if ($user->role !== 'college_admin') {
             return response()->json(['message' => 'Unauthorized role'], 403);
         }
 
