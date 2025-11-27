@@ -24,9 +24,16 @@ function Login() {
       await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
       const res = await api.post('/auth/login/student-password', { student_id: studentId, password: studentPassword });
       const role = res?.data?.user?.role || 'student';
+      const deptId = res?.data?.user?.department_id;
+      const studentDbId = res?.data?.user?.student_id; // numeric FK to students table
+      const studentInfo = res?.data?.student;
       if (typeof window !== 'undefined') {
         localStorage.setItem('auth_role', role);
         if (studentId) localStorage.setItem('student_id', String(studentId));
+        if (deptId) localStorage.setItem('department_id', String(deptId));
+        if (studentDbId) localStorage.setItem('student_db_id', String(studentDbId));
+        if (studentInfo?.year_level) localStorage.setItem('year_level', String(studentInfo.year_level));
+        if (studentInfo?.semester) localStorage.setItem('semester', String(studentInfo.semester));
       }
       navigate('/dashboard');
     } catch (err) {

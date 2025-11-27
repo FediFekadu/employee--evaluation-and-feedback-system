@@ -59,3 +59,114 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   .grid { grid-template-columns: 1fr; }
   .hero h1 { font-size: 32px; }
 }
+
+/* Responsive table utilities */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-fixed {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px; /* keep columns readable on small screens */
+}
+.table-fixed th,
+.table-fixed td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  vertical-align: top;
+}
+.table-fixed thead textarea {
+  width: 100%;
+  resize: vertical;
+}
+.table-fixed input.btn.btn-ghost,
+.table-fixed textarea.btn.btn-ghost {
+  width: 100%;
+}
+.table-fixed .scale-label {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .table-fixed th,
+  .table-fixed td {
+    padding: 6px;
+    font-size: 0.95rem;
+  }
+  .table-fixed input.btn.btn-ghost,
+  .table-fixed textarea.btn.btn-ghost {
+    font-size: 0.95rem;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-fixed th,
+  .table-fixed td {
+    padding: 4px;
+    font-size: 0.9rem;
+  }
+  .table-fixed input.btn.btn-ghost,
+  .table-fixed textarea.btn.btn-ghost {
+    font-size: 0.9rem;
+    padding: 4px 6px;
+  }
+}
+
+/* Responsive layout utilities */
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; border-right: 1px solid rgba(255,255,255,0.08); padding: 16px; }
+.content { flex: 1; padding: 24px; }
+.mobile-toggle { display: none; }
+
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidebar { display: none; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .sidebar.is-open { display: block; position: fixed; top: 0; left: 0; height: 100vh; width: 80%; max-width: 320px; background: var(--panel); z-index: 1000; overflow-y: auto; }
+  .content { padding: 16px; }
+  .mobile-toggle { display: inline-flex; align-items: center; gap: 8px; }
+}
+
+/* Department-scoped styles (avoid sharing one class across all pages) */
+.dept-card { background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.25); }
+.dept-card h3 { margin: 0 0 8px; font-size: 18px; }
+.dept-card p { margin: 0; color: var(--muted); }
+
+.dept-link { color: var(--text); text-decoration: none; padding: 8px 12px; border-radius: 8px; transition: 120ms ease; display: inline-block; }
+.dept-link:hover { background: rgba(255,255,255,0.06); }
+
+.dept-btn { display: inline-block; padding: 10px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; transition: 140ms ease; }
+.dept-btn-primary { background: var(--primary); color: #041b1f; }
+.dept-btn-primary:hover { background: var(--primary-dark); color: #e6fafe; }
+.dept-btn-ghost { color: var(--text); border: 1px solid rgba(255,255,255,0.14); background: transparent; }
+.dept-btn-ghost:hover { background: rgba(255,255,255,0.06); }
+
+.dept-input { color: var(--text); background: transparent; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.dept-textarea { color: var(--text); background: transparent; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 10px 12px; width: 100%; resize: vertical; }
+.dept-select { color: var(--text); background: transparent; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 10px 12px; width: 100%; }
+
+.dept-table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.dept-table-fixed { width: 100%; border-collapse: collapse; min-width: 900px; }
+.dept-table-fixed th,
+.dept-table-fixed td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); vertical-align: top; }
+.dept-table-fixed thead textarea { width: 100%; }
+.dept-table-fixed input.dept-input,
+.dept-table-fixed textarea.dept-textarea { width: 100%; }
+.dept-scale-label { white-space: pre-wrap; word-break: break-word; }
+
+@media (max-width: 768px) {
+  .dept-table-fixed th,
+  .dept-table-fixed td { padding: 6px; font-size: 0.95rem; }
+  .dept-table-fixed input.dept-input,
+  .dept-table-fixed textarea.dept-textarea { font-size: 0.95rem; padding: 6px 8px; }
+}
+
+@media (max-width: 480px) {
+  .dept-table-fixed th,
+  .dept-table-fixed td { padding: 4px; font-size: 0.9rem; }
+  .dept-table-fixed input.dept-input,
+  .dept-table-fixed textarea.dept-textarea { font-size: 0.9rem; padding: 4px 6px; }
+}

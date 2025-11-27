@@ -17,6 +17,7 @@ class Teacher extends Model
 
     public function courses(): BelongsToMany
     {
-        return $this->belongsToMany(Course::class);
+        // Include pivot metadata if present (e.g., year_level, semester)
+        return $this->belongsToMany(Course::class)->withPivot(['year_level', 'semester']);
     }
 }

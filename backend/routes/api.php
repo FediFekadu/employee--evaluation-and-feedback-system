@@ -8,6 +8,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\StudentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Auth routes for SPA
 Route::post('/auth/login/student', [AuthController::class, 'loginStudent']);
+Route::post('/auth/login/student-password', [AuthController::class, 'loginStudentPassword']);
+Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/logout', [AuthController::class, 'logout']);
 
@@ -40,6 +43,7 @@ Route::post('/evaluations', [EvaluationController::class, 'store']);
 Route::get('/evaluations/{evaluation}', [EvaluationController::class, 'show']);
 Route::put('/evaluations/{evaluation}', [EvaluationController::class, 'update']);
 Route::get('/evaluations/{evaluation}/summary', [EvaluationController::class, 'summary']);
+Route::put('/evaluations/{evaluation}/questions', [EvaluationController::class, 'setQuestions']);
 
 Route::post('/feedbacks', [FeedbackController::class, 'store']);
 
@@ -60,3 +64,6 @@ Route::delete('/department-admins/{user}', [DepartmentController::class, 'delete
 Route::get('/teachers', [TeacherController::class, 'index']);
 Route::post('/teachers', [TeacherController::class, 'store']);
 Route::get('/teachers/{teacher}', [TeacherController::class, 'show']);
+
+// Students
+Route::post('/departments/{department}/students', [StudentController::class, 'store']);

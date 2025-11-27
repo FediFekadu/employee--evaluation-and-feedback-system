@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Evaluation;
+use App\Models\Question;
 use Illuminate\Http\Request;
 
 class EvaluationController extends Controller
@@ -23,6 +24,9 @@ class EvaluationController extends Controller
         if (request()->has('semester')) {
             $query->where('semester', request()->get('semester'));
         }
+        if (request()->has('year_level')) {
+            $query->where('year_level', (int) request()->get('year_level'));
+        }
         if (request()->boolean('open_only')) {
             $today = now()->toDateString();
             $query->whereDate('opened_at', '<=', $today)
@@ -41,6 +45,7 @@ class EvaluationController extends Controller
             'teacher_id' => 'required|exists:teachers,id',
             'academic_year' => 'required|string',
             'semester' => 'required|string',
+            'year_level' => 'required|integer|min:1|max:6',
             'opened_at' => 'required|date',
             'closed_at' => 'nullable|date',
         ]);
@@ -59,11 +64,43 @@ class EvaluationController extends Controller
         $data = $request->validate([
             'academic_year' => 'sometimes|required|string',
             'semester' => 'sometimes|required|string',
+            'year_level' => 'nullable|integer|min:1|max:6',
             'opened_at' => 'sometimes|required|date',
             'closed_at' => 'nullable|date',
         ]);
         $evaluation->update($data);
         return response()->json($evaluation);
+    }
+
+    /**
+     * Replace evaluation form questions.
+     */
+    public function setQuestions(Request $request, Evaluation $evaluation)
+    {
+        $payload = $request->validate([
+            'questions' => 'required|array|min:1',
+            'questions.*.text' => 'required|string',
+            'questions.*.type' => 'required|in:rating,text',
+        ]);
+
+        // Detach existing questions
+        $evaluation->questions()->detach();
+
+        // Create and attach new questions
+        $questionIds = [];
+        foreach ($payload['questions'] as $q) {
+            $question = Question::create([
+                'text' => $q['text'],
+                'type' => $q['type'],
+            ]);
+            $questionIds[] = $question->id;
+        }
+        $evaluation->questions()->attach($questionIds);
+
+        return response()->json([
+            'evaluation_id' => $evaluation->id,
+            'questions' => $evaluation->questions()->get(),
+        ]);
     }
 
     public function summary(Evaluation $evaluation)

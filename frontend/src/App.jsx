@@ -2,9 +2,38 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import api from './services/api';
 import Login from './pages/Login';
-import StudentDashboard from './pages/StudentDashboard';
-import AdminDashboard from './pages/CollegeAdminDashboard';
-import DepartmentDashboard from './pages/DepartmentDashboard';
+// Student dashboard nested
+import StudentLayout from './pages/dashboards/Student/Layout';
+import StudentHome from './pages/dashboards/Student/Home';
+import StudentEvaluations from './pages/dashboards/Student/Evaluations';
+import StudentProfile from './pages/dashboards/Student/Profile';
+// Admin dashboard nested (used by /admin and /superadmin)
+import CollegeAdminLayout from './pages/dashboards/CollegeAdmin/Layout';
+import CollegeAdminOverview from './pages/dashboards/CollegeAdmin/Overview';
+import CollegeAdminDepartments from './pages/dashboards/CollegeAdmin/Departments';
+import CollegeAdminAdmins from './pages/dashboards/CollegeAdmin/Admins';
+import CollegeAdminInstructors from './pages/dashboards/CollegeAdmin/Instructors';
+import CollegeAdminStudents from './pages/dashboards/CollegeAdmin/Students';
+import CollegeAdminCourses from './pages/dashboards/CollegeAdmin/Courses';
+import CollegeAdminEvaluations from './pages/dashboards/CollegeAdmin/Evaluations';
+import CollegeAdminReports from './pages/dashboards/CollegeAdmin/Reports';
+import CollegeAdminSettings from './pages/dashboards/CollegeAdmin/Settings';
+import CollegeAdminCommunication from './pages/dashboards/CollegeAdmin/Communication';
+import CollegeAdminNotifications from './pages/dashboards/CollegeAdmin/Notifications';
+// Teacher dashboard nested
+import TeacherLayout from './pages/dashboards/Teacher/Layout';
+import TeacherHome from './pages/dashboards/Teacher/Home';
+import TeacherCourses from './pages/dashboards/Teacher/Courses';
+import TeacherFeedback from './pages/dashboards/Teacher/Feedback';
+import TeacherProfile from './pages/dashboards/Teacher/Profile';
+// Department dashboard nested
+import DepartmentLayout from './pages/dashboards/Department/Layout';
+import DepartmentOverview from './pages/dashboards/Department/Overview';
+import DepartmentCourses from './pages/dashboards/Department/Courses';
+import DepartmentInstructors from './pages/dashboards/Department/Instructors';
+import DepartmentStudents from './pages/dashboards/Department/Students';
+import DepartmentEvaluations from './pages/dashboards/Department/Evaluations';
+import DepartmentReports from './pages/dashboards/Department/Reports';
 
 function App() {
   const [theme, setTheme] = useState('dark');
@@ -107,10 +136,56 @@ function App() {
             }
           />
           <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<StudentDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/superadmin" element={<AdminDashboard />} />
-          <Route path="/department/:id" element={<DepartmentDashboard />} />
+          {/* Student dashboard */}
+          <Route path="/dashboard" element={<StudentLayout />}>
+            <Route index element={<StudentHome />} />
+            <Route path="evaluations" element={<StudentEvaluations />} />
+            <Route path="profile" element={<StudentProfile />} />
+          </Route>
+          {/* College Admin dashboard */}
+          <Route path="/admin" element={<CollegeAdminLayout />}>
+            <Route index element={<CollegeAdminOverview />} />
+            <Route path="departments" element={<CollegeAdminDepartments />} />
+            <Route path="admins" element={<CollegeAdminAdmins />} />
+            <Route path="instructors" element={<CollegeAdminInstructors />} />
+            <Route path="students" element={<CollegeAdminStudents />} />
+            <Route path="courses" element={<CollegeAdminCourses />} />
+            <Route path="evaluations" element={<CollegeAdminEvaluations />} />
+            <Route path="reports" element={<CollegeAdminReports />} />
+            <Route path="settings" element={<CollegeAdminSettings />} />
+            <Route path="communication" element={<CollegeAdminCommunication />} />
+            <Route path="notifications" element={<CollegeAdminNotifications />} />
+          </Route>
+          {/* Super Admin reuses College Admin layout */}
+          <Route path="/superadmin" element={<CollegeAdminLayout />}>
+            <Route index element={<CollegeAdminOverview />} />
+            <Route path="departments" element={<CollegeAdminDepartments />} />
+            <Route path="admins" element={<CollegeAdminAdmins />} />
+            <Route path="instructors" element={<CollegeAdminInstructors />} />
+            <Route path="students" element={<CollegeAdminStudents />} />
+            <Route path="courses" element={<CollegeAdminCourses />} />
+            <Route path="evaluations" element={<CollegeAdminEvaluations />} />
+            <Route path="reports" element={<CollegeAdminReports />} />
+            <Route path="settings" element={<CollegeAdminSettings />} />
+            <Route path="communication" element={<CollegeAdminCommunication />} />
+            <Route path="notifications" element={<CollegeAdminNotifications />} />
+          </Route>
+          {/* Teacher dashboard */}
+          <Route path="/teacher" element={<TeacherLayout />}>
+            <Route index element={<TeacherHome />} />
+            <Route path="courses" element={<TeacherCourses />} />
+            <Route path="feedback" element={<TeacherFeedback />} />
+            <Route path="profile" element={<TeacherProfile />} />
+          </Route>
+          {/* Department dashboard */}
+          <Route path="/department/:id" element={<DepartmentLayout />}>
+            <Route index element={<DepartmentOverview />} />
+            <Route path="courses" element={<DepartmentCourses />} />
+            <Route path="instructors" element={<DepartmentInstructors />} />
+            <Route path="students" element={<DepartmentStudents />} />
+            <Route path="evaluations" element={<DepartmentEvaluations />} />
+            <Route path="reports" element={<DepartmentReports />} />
+          </Route>
         </Routes>
       </main>
 

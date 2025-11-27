@@ -10,6 +10,30 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function loginStudentPassword(Request $request)
+    {
+        $data = $request->validate([
+            'student_id' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $student = Student::where('student_id', $data['student_id'])->first();
+        if (!$student) {
+            return response()->json(['message' => 'Invalid student credentials'], 422);
+        }
+
+        $user = User::where('student_id', $student->id)->first();
+        if (!$user || !Hash::check($data['password'], $user->password)) {
+            return response()->json(['message' => 'Invalid student credentials'], 422);
+        }
+
+        Auth::login($user);
+        return response()->json([
+            'user' => $user,
+            'student' => $student,
+        ]);
+    }
+
     public function loginStudent(Request $request)
     {
         $data = $request->validate([
@@ -53,8 +77,10 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 422);
         }
 
-        // Only allow admin role
-        if ($user->role !== 'college_admin') {
+        // Allow specific roles to use email/password login
+        // Admins and instructors sign in here; students use dedicated endpoints
+        $allowedRoles = ['superadmin', 'college_admin', 'department_admin', 'teacher'];
+        if (!in_array($user->role, $allowedRoles, true)) {
             return response()->json(['message' => 'Unauthorized role'], 403);
         }
 
@@ -68,5 +94,24 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return response()->json(['message' => 'Logged out']);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'old_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+        ]);
+
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+        if (!Hash::check($data['old_password'], $user->password)) {
+            return response()->json(['message' => 'Invalid current password'], 422);
+        }
+        $user->password = Hash::make($data['new_password']);
+        $user->save();
+        return response()->json(['message' => 'Password changed']);
     }
 }

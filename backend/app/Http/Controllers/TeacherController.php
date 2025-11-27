@@ -59,4 +59,11 @@ class TeacherController extends Controller
         $out['default_password'] = $createdNewUser ? $defaultPassword : null;
         return response()->json($out, 201);
     }
+
+    // Show a teacher with department and assigned courses
+    public function show(Teacher $teacher)
+    {
+        // Load department and courses (including pivot data if defined on the relation)
+        return $teacher->load(['department', 'courses']);
+    }
 }
