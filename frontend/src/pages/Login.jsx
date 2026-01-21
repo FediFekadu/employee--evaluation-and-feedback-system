@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import api from '../services/api';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { Box, Card, CardContent, Tabs, Tab, TextField, Button, Typography, Alert } from '@mui/material';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Login() {
-  const [tab, setTab] = useState(0);
+  const [activeTab, setActiveTab] = useState('student');
   const [studentId, setStudentId] = useState('');
   const [studentPassword, setStudentPassword] = useState('');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleStudentLogin = async (e) => {
@@ -20,24 +19,31 @@ function Login() {
     setLoading(true);
     setError('');
     try {
-      // Ensure CSRF cookie for Sanctum SPA (cookie endpoint is not under /api)
       await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
-      const res = await api.post('/auth/login/student-password', { student_id: studentId, password: studentPassword });
+      const res = await api.post('/auth/login/student-password', { 
+        student_id: studentId, 
+        password: studentPassword 
+      }, { withCredentials: true });
+      
       const role = res?.data?.user?.role || 'student';
       const deptId = res?.data?.user?.department_id;
-      const studentDbId = res?.data?.user?.student_id; // numeric FK to students table
+      const studentDeptId = res?.data?.student?.department_id;
+      const studentDbId = res?.data?.student?.id; // Fixed: get the student's database ID
       const studentInfo = res?.data?.student;
+      
       if (typeof window !== 'undefined') {
         localStorage.setItem('auth_role', role);
         if (studentId) localStorage.setItem('student_id', String(studentId));
-        if (deptId) localStorage.setItem('department_id', String(deptId));
+        // Ensure department_id is set. Fallback to student's department if user.department_id is missing.
+        const effectiveDeptId = deptId || studentDeptId;
+        if (effectiveDeptId) localStorage.setItem('department_id', String(effectiveDeptId));
         if (studentDbId) localStorage.setItem('student_db_id', String(studentDbId));
         if (studentInfo?.year_level) localStorage.setItem('year_level', String(studentInfo.year_level));
         if (studentInfo?.semester) localStorage.setItem('semester', String(studentInfo.semester));
       }
       navigate('/dashboard');
     } catch (err) {
-      setError('Login failed. Check ID and password.');
+      setError('Login failed. Please check your Student ID and password.');
     } finally {
       setLoading(false);
     }
@@ -49,10 +55,12 @@ function Login() {
     setError('');
     try {
       await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email, password }, { withCredentials: true });
+      
       const role = res?.data?.user?.role;
       const deptId = res?.data?.user?.department_id;
       const teacherId = res?.data?.user?.teacher_id;
+      
       if (role) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_role', role);
@@ -60,90 +68,229 @@ function Login() {
           if (teacherId) localStorage.setItem('teacher_id', String(teacherId));
         }
       }
+      
       if (role === 'superadmin' || role === 'college_admin') navigate('/admin');
       else if (role === 'department_admin' && deptId) navigate(`/department/${deptId}`);
       else if (role === 'teacher' && teacherId) navigate('/teacher');
       else if (role === 'student') navigate('/dashboard');
       else navigate('/');
     } catch (err) {
-      setError('Invalid email or password.');
+      setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ maxWidth: 520, mx: 'auto', mt: 6 }}>
-      <Card elevation={3}>
-        <CardContent>
-          <Typography variant="h5" sx={{ mb: 2 }}>Sign in</Typography>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} aria-label="login tabs" sx={{ mb: 3 }}>
-            <Tab label="Student" />
-            <Tab label="Admin" />
-          </Tabs>
+    <div className="login-container">
+      {/* Background Elements */}
+      <div className="login-background">
+        <div className="bg-shape shape-1"></div>
+        <div className="bg-shape shape-2"></div>
+        <div className="bg-shape shape-3"></div>
+      </div>
 
-          {tab === 0 && (
-            <Box component="form" onSubmit={handleStudentLogin}>
-              <TextField
-                label="Student ID"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                fullWidth
-                required
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Password"
-                type="password"
-                value={studentPassword}
-                onChange={(e) => setStudentPassword(e.target.value)}
-                fullWidth
-                required
-                sx={{ mb: 2 }}
-              />
-              <Button type="submit" variant="contained" fullWidth disabled={loading}>
-                {loading ? 'Signing in…' : 'Login as Student'}
-              </Button>
-              <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                Default Student Password: student123 (set by department admin)
-              </Typography>
-            </Box>
-          )}
+      {/* Login Card */}
+      <div className="login-card">
+        {/* Header */}
+        <div className="login-header">
+          <div className="login-logo">
+            <div className="logo-icon">🎓</div>
+            <div className="logo-text">
+              <h1>Welcome Back</h1>
+              <p>Sign in to your evaluation portal</p>
+            </div>
+          </div>
+        </div>
 
-          {tab === 1 && (
-            <Box component="form" onSubmit={handleAdminLogin}>
-              <TextField
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                fullWidth
-                required
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                fullWidth
-                required
-                sx={{ mb: 2 }}
-              />
-              <Button type="submit" variant="contained" fullWidth disabled={loading}>
-                {loading ? 'Signing in…' : 'Login as Admin'}
-              </Button>
-              <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                Default College Admin: admin@college.local / Admin@1234
-                Default Instructor: created via admin panel (password: teacher123)
-              </Typography>
-            </Box>
-          )}
+        {/* Tab Navigation */}
+        <div className="login-tabs">
+          <button
+            className={`tab-button ${activeTab === 'student' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('student')}
+          >
+            <span className="tab-icon">👨‍🎓</span>
+            <span>Student</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'admin' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('admin')}
+          >
+            <span className="tab-icon">👨‍💼</span>
+            <span>Staff</span>
+          </button>
+        </div>
 
-          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-        </CardContent>
-      </Card>
-    </Box>
+        {/* Error Message */}
+        {error && (
+          <div className="login-error">
+            <span className="error-icon">⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Student Login Form */}
+        {activeTab === 'student' && (
+          <form className="login-form" onSubmit={handleStudentLogin}>
+            <div className="form-group">
+              <label htmlFor="studentId" className="form-label">
+                Student ID
+              </label>
+              <div className="input-wrapper">
+                <span className="input-icon">🆔</span>
+                <input
+                  id="studentId"
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter your student ID"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="studentPassword" className="form-label">
+                Password
+              </label>
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  id="studentPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  className="form-input"
+                  placeholder="Enter your password"
+                  value={studentPassword}
+                  onChange={(e) => setStudentPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="login-button"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <span>Sign In as Student</span>
+                  <span className="button-arrow">→</span>
+                </>
+              )}
+            </button>
+
+            <div className="login-help">
+              <p className="help-text">
+                <strong>Default Password:</strong> student123
+              </p>
+              <p className="help-subtext">
+                Contact your department admin if you need assistance
+              </p>
+            </div>
+          </form>
+        )}
+
+        {/* Admin Login Form */}
+        {activeTab === 'admin' && (
+          <form className="login-form" onSubmit={handleAdminLogin}>
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
+                Email Address
+              </label>
+              <div className="input-wrapper">
+                <span className="input-icon">📧</span>
+                <input
+                  id="email"
+                  type="email"
+                  className="form-input"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="adminPassword" className="form-label">
+                Password
+              </label>
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  id="adminPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  className="form-input"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="login-button"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <span>Sign In as Staff</span>
+                  <span className="button-arrow">→</span>
+                </>
+              )}
+            </button>
+
+            <div className="login-help">
+              <p className="help-text">
+                <strong>Demo Accounts:</strong>
+              </p>
+              <p className="help-subtext">
+                Admin: admin@college.local / Admin@1234<br />
+                Teacher: Use credentials from admin panel
+              </p>
+            </div>
+          </form>
+        )}
+
+        {/* Footer */}
+        <div className="login-footer">
+          <Link to="/" className="back-link">
+            ← Back to Home
+          </Link>
+          <p className="footer-text">
+            Informatics College Evaluation System
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

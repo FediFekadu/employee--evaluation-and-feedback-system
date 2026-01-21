@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Student extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['department_id', 'name', 'email', 'student_id', 'year_level', 'semester'];
 
     public function department(): BelongsTo
@@ -24,5 +27,13 @@ class Student extends Model
     public function feedbacks(): HasMany
     {
         return $this->hasMany(Feedback::class);
+    }
+
+    /**
+     * Get the evaluation submissions for this student.
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(EvaluationSubmission::class);
     }
 }

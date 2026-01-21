@@ -1,287 +1,322 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../../services/api';
+import DepartmentTemplateManager from '../../../components/DepartmentTemplateManager';
 
-function FormBuilder({ evaluations, onSaved }) {
-  const [selectedId, setSelectedId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [questions, setQuestions] = useState([]);
-  const [message, setMessage] = useState('');
+// Add CSS animations
+const styles = `
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+  
+  @keyframes slideIn {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  .participation-update {
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .low-participation-alert {
+    animation: pulse 2s infinite;
+  }
+`;
 
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
+// Participation Indicator Component
+function ParticipationIndicator({ evaluationId, getParticipationForEvaluation, eligibleStudents, lowParticipationThreshold = 30 }) {
+  const participation = getParticipationForEvaluation(evaluationId);
+  const [previousRate, setPreviousRate] = useState(participation.rate);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [trend, setTrend] = useState('stable');
+
+  // Track participation changes for visual feedback
   useEffect(() => {
-    let mounted = true;
-    const loadExisting = async () => {
-      if (!selectedId) { setQuestions([]); return; }
-      setLoading(true);
-      setMessage('');
-      try {
-        const res = await api.get(`/evaluations/${selectedId}`);
-        const existing = res.data?.questions || [];
-        const mapped = existing.map((q) => ({ text: q.text || '', type: q.type || 'rating' }));
-        if (mounted) setQuestions(mapped);
-      } catch (e) {
-        if (mounted) setMessage('Failed to load existing questions');
-      } finally {
-        if (mounted) setLoading(false);
+    if (participation.rate !== previousRate) {
+      setIsUpdating(true);
+      
+      // Determine trend
+      if (participation.rate > previousRate) {
+        setTrend('increasing');
+      } else if (participation.rate < previousRate) {
+        setTrend('decreasing');
+      } else {
+        setTrend('stable');
       }
-    };
-    loadExisting();
-    return () => { mounted = false; };
-  }, [selectedId]);
+      
+      setPreviousRate(participation.rate);
+      
+      // Reset updating state after animation
+      const timer = setTimeout(() => setIsUpdating(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [participation.rate, previousRate]);
 
-  const addQuestion = (type) => {
-    setQuestions((qs) => [...qs, { text: '', type }]);
+  const getStatusColor = (rate) => {
+    if (rate >= 70) return '#27ae60';
+    if (rate >= 40) return '#f39c12';
+    return '#e74c3c';
   };
-  const updateQuestion = (idx, patch) => {
-    setQuestions((qs) => qs.map((q, i) => i === idx ? { ...q, ...patch } : q));
+
+  const getStatusText = (rate) => {
+    if (rate >= 70) return 'High';
+    if (rate >= 40) return 'Medium';
+    return 'Low';
   };
-  const removeQuestion = (idx) => {
-    setQuestions((qs) => qs.filter((_, i) => i !== idx));
-  };
-  const saveQuestions = async () => {
-    if (!selectedId) { setMessage('Select an evaluation first'); return; }
-    const cleaned = questions.filter((q) => q.text && q.type);
-    if (cleaned.length === 0) { setMessage('Add at least one question'); return; }
-    setSaving(true);
-    setMessage('');
-    try {
-      await api.put(`/evaluations/${selectedId}/questions`, { questions: cleaned });
-      setMessage('Form saved');
-      onSaved?.();
-    } catch (e) {
-      setMessage('Failed to save form');
-    } finally {
-      setSaving(false);
+
+  const getTrendIcon = () => {
+    switch (trend) {
+      case 'increasing': return '📈';
+      case 'decreasing': return '📉';
+      default: return '📊';
     }
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <label style={{ flex: 1 }}>
-          Evaluation
-          <select className="dept-select" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            <option value="">Select evaluation</option>
-            {evaluations.map((ev) => (
-              <option key={ev.id} value={String(ev.id)}>
-                {ev.course?.title} – {ev.teacher?.name} ({ev.opened_at})
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="dept-btn dept-btn-ghost" onClick={() => addQuestion('rating')}>Add rating</button>
-        <button className="dept-btn dept-btn-ghost" onClick={() => addQuestion('text')}>Add text</button>
-        <button className="dept-btn dept-btn-primary" onClick={saveQuestions} disabled={saving || loading}>
-          {saving ? 'Saving…' : 'Save Form'}
-        </button>
+    <div style={{ 
+      minWidth: 140, 
+      padding: 8,
+      borderRadius: 6,
+      backgroundColor: isUpdating ? '#f8f9fa' : 'transparent',
+      border: isUpdating ? '2px solid #3498db' : '1px solid transparent',
+      transition: 'all 0.3s ease'
+    }}>
+      {/* Header with counts and percentage */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        fontSize: '0.85em', 
+        marginBottom: 4,
+        fontWeight: 'bold'
+      }}>
+        <span>{participation.count}/{eligibleStudents}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ color: getStatusColor(participation.rate) }}>
+            {participation.rate.toFixed(1)}%
+          </span>
+          <span style={{ fontSize: '0.8em' }}>{getTrendIcon()}</span>
+        </div>
       </div>
-      {message && <p style={{ color: 'var(--muted)' }}>{message}</p>}
-      {loading && <p>Loading questions…</p>}
-      {!loading && (
-        <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-          {questions.length === 0 && <p style={{ color: 'var(--muted)' }}>No questions yet. Add rating or text questions.</p>}
-          {questions.map((q, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input className="dept-input" style={{ flex: 3 }} placeholder="Question text" value={q.text} onChange={(e) => updateQuestion(idx, { text: e.target.value })} />
-              <select className="dept-select" style={{ flex: 1 }} value={q.type} onChange={(e) => updateQuestion(idx, { type: e.target.value })}>
-                <option value="rating">Rating (1–5)</option>
-                <option value="text">Text (comment)</option>
-              </select>
-              <button className="dept-btn dept-btn-ghost" onClick={() => removeQuestion(idx)}>Remove</button>
-            </div>
-          ))}
+
+      {/* Progress bar */}
+      <div style={{ 
+        width: '100%', 
+        height: 8, 
+        backgroundColor: '#ecf0f1', 
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 4
+      }}>
+        <div 
+          style={{ 
+            width: `${Math.min(participation.rate, 100)}%`, 
+            height: '100%',
+            backgroundColor: getStatusColor(participation.rate),
+            transition: 'width 0.5s ease',
+            position: 'relative'
+          }}
+        >
+          {/* Animated pulse effect for updates */}
+          {isUpdating && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              animation: 'pulse 1s ease-in-out'
+            }} />
+          )}
+        </div>
+      </div>
+
+      {/* Status and alerts */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ 
+          fontSize: '0.7em', 
+          color: getStatusColor(participation.rate),
+          fontWeight: 'bold'
+        }}>
+          {getStatusText(participation.rate)}
+        </span>
+        
+        {participation.rate < lowParticipationThreshold && (
+          <div style={{ 
+            fontSize: '0.7em', 
+            color: '#e74c3c',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            ⚠️ Low
+          </div>
+        )}
+      </div>
+
+      {/* Last submission time */}
+      {participation.lastSubmissionAt && (
+        <div style={{ 
+          fontSize: '0.6em', 
+          color: 'var(--muted)', 
+          marginTop: 2,
+          textAlign: 'center'
+        }}>
+          Last: {new Date(participation.lastSubmissionAt).toLocaleTimeString()}
+        </div>
+      )}
+
+      {/* Update indicator */}
+      {isUpdating && (
+        <div style={{
+          fontSize: '0.6em',
+          color: '#3498db',
+          textAlign: 'center',
+          marginTop: 2,
+          fontWeight: 'bold'
+        }}>
+          🔄 Updating...
         </div>
       )}
     </div>
   );
 }
 
-function EvaluationTableBuilder({ evaluations, onSaved }) {
-  const [selectedId, setSelectedId] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+// Live Analytics Dashboard Component
+function LiveAnalyticsDashboard({ evaluations, participationData, getParticipationForEvaluation, eligibleStudents }) {
+  const [selectedMetric, setSelectedMetric] = useState('participation');
+  
+  const overallStats = useMemo(() => {
+    const activeEvaluations = evaluations.filter(ev => !ev.closed_at);
+    const totalParticipation = activeEvaluations.reduce((sum, ev) => {
+      const participation = getParticipationForEvaluation(ev.id);
+      return sum + participation.count;
+    }, 0);
+    
+    const averageParticipationRate = activeEvaluations.length > 0 
+      ? activeEvaluations.reduce((sum, ev) => {
+          const participation = getParticipationForEvaluation(ev.id);
+          return sum + participation.rate;
+        }, 0) / activeEvaluations.length
+      : 0;
 
-  const [headerTitle, setHeaderTitle] = useState('EVALUATION CRITERIA');
-  const [headerSubTitle, setHeaderSubTitle] = useState('የምዘና መስፈርት');
-  const [scaleLabels, setScaleLabels] = useState({
-    vlow: '1. Very low\nበጣም ዝቅተኛ',
-    med: '2. Medium\nመካከለኛ',
-    high: '3. High\nከፍተኛ',
-    vhigh: '4. Very high\nበጣም ከፍተኛ',
-    na: 'Does not Apply to NA\nአይመለከተም',
-  });
+    const lowParticipationCount = activeEvaluations.filter(ev => {
+      const participation = getParticipationForEvaluation(ev.id);
+      return participation.rate < 30;
+    }).length;
 
-  const defaultSections = useMemo(() => ([
-    {
-      key: 'A',
-      title: 'A. INSTRUCTIONAL SKILLS: (የማስተማር ችሎታዎች)',
-      items: [
-        'Applies & respects day one class one.',
-        'Prepares & gives clear course outline.',
-        'Offers the course based on the sequence & content indicated in course outline.',
-        'Outline & explains clearly the objectives of the chapters & topics.',
-        'Presents the course clearly using instructional language.',
-        'Has adequate knowledge about the course offered.',
-        'Gets prepared & comes to the class always for daily lesson.',
-        'Explains the course briefly using pertinent examples, illustrations & real life situations frequently as necessary.',
-        'Identifies & offers the course to the learners based on their understanding level.',
-        "Gives class works, homework, assignments, work sheets, review questions - etc and provides solutions and feedbacks on time.",
-        'Teaches using appropriate Instructional materials (teaching aids).',
-        'Provides handout as well as necessary lists of reference books.',
-        'Has interest & motivation to teach.',
-        'Uses the class only for appropriate teaching & learning issues.',
-      ],
-    },
-    {
-      key: 'B',
-      title: 'B. PROFESSIONAL ETHICS & ATTITUDE TOWARDS THE STUDENTS: (የባለሙያ ስነምግባር እና ከተማሪዎች ጋር ያለው አመለካከት)',
-      items: [
-        'Always comes to the class on time & compensates wasted class time regularly.',
-        "Encourages the students to participate in the class and receives answers from & gives answers to students' questions satisfactorily.",
-        'Always avails himself or herself & solves the academic problem of the students during consultation hours.',
-        'Treats students equally and fairly without any discrimination.',
-        'Usually motivates and encourages students to learn.',
-        'Tries to foster climate of trust and respect in teaching and learning process.',
-        'Encourages student to express their feelings.',
-        'Good role model, honest & a person of integrity.',
-      ],
-    },
-    {
-      key: 'C',
-      title: 'C. ASSESSMENT METHODS & FEEDBACK: (የአሰሳሰ ዘዴዎች እና ግብረመልስ)',
-      items: [
-        'Announces the methods & types of assessment used in the course in advance.',
-        'Checks if students have understood the lesson by different mechanisms.',
-        'Using continuous assessment, assesses students with various methods.',
-        "Corrects the students' assessments & gives feedbacks on time.",
-        'Prepares exam questions from topics & portions covered.',
-        'Allocates sufficient time for each tests & exams.',
-        'Identifies students who scored below satisfactory & helps them to improve their result.',
-      ],
-    },
-  ]), []);
-
-  const [sections, setSections] = useState(defaultSections);
-
-  const addItem = (sidx) => {
-    setSections((secs) => secs.map((s, i) => i === sidx ? { ...s, items: [...s.items, ''] } : s));
-  };
-  const removeItem = (sidx, idx) => {
-    setSections((secs) => secs.map((s, i) => i === sidx ? { ...s, items: s.items.filter((_, j) => j !== idx) } : s));
-  };
-  const updateItem = (sidx, idx, text) => {
-    setSections((secs) => secs.map((s, i) => i === sidx ? { ...s, items: s.items.map((t, j) => j === idx ? text : t) } : s));
-  };
-  const updateSectionTitle = (sidx, text) => {
-    setSections((secs) => secs.map((s, i) => i === sidx ? { ...s, title: text } : s));
-  };
-
-  const saveAsQuestions = async () => {
-    if (!selectedId) { setMessage('Select an evaluation first'); return; }
-    const texts = sections.flatMap((s) => s.items).map((t) => t.trim()).filter(Boolean);
-    if (texts.length === 0) { setMessage('Add at least one criterion text'); return; }
-    setSaving(true);
-    setMessage('');
-    try {
-      await api.put(`/evaluations/${selectedId}/questions`, { questions: texts.map((text) => ({ text, type: 'rating' })) });
-      setMessage('Form saved');
-      onSaved?.();
-    } catch (e) {
-      setMessage('Failed to save form');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const renderScaleHeader = (txt) => (
-    <textarea className="btn btn-ghost scale-label" defaultValue={txt} onChange={(e) => {
-      const val = e.target.value;
-      const [vlow, med, high, vhigh, na] = [scaleLabels.vlow, scaleLabels.med, scaleLabels.high, scaleLabels.vhigh, scaleLabels.na];
-      if (txt === vlow) setScaleLabels((s) => ({ ...s, vlow: val }));
-      else if (txt === med) setScaleLabels((s) => ({ ...s, med: val }));
-      else if (txt === high) setScaleLabels((s) => ({ ...s, high: val }));
-      else if (txt === vhigh) setScaleLabels((s) => ({ ...s, vhigh: val }));
-      else if (txt === na) setScaleLabels((s) => ({ ...s, na: val }));
-    }} rows={2} />
-  );
+    return {
+      activeEvaluations: activeEvaluations.length,
+      totalParticipation,
+      averageParticipationRate,
+      lowParticipationCount
+    };
+  }, [evaluations, getParticipationForEvaluation]);
 
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <label style={{ flex: 1 }}>
-          Evaluation
-          <select className="dept-select" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            <option value="">Select evaluation</option>
-            {evaluations.map((ev) => (
-              <option key={ev.id} value={String(ev.id)}>
-                {ev.course?.title} – {ev.teacher?.name} ({ev.opened_at})
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="dept-btn dept-btn-primary" onClick={saveAsQuestions} disabled={saving}>
-          {saving ? 'Saving…' : 'Save Form'}
-        </button>
+    <div style={{ 
+      padding: 16, 
+      backgroundColor: '#f8f9fa', 
+      borderRadius: 8, 
+      border: '1px solid #dee2e6',
+      marginBottom: 16
+    }}>
+      <h5 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>📊 Live Analytics Dashboard</h5>
+      
+      {/* Metric selector */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        {['participation', 'trends', 'alerts'].map(metric => (
+          <button
+            key={metric}
+            className={`dept-btn ${selectedMetric === metric ? 'dept-btn-primary' : 'dept-btn-ghost'}`}
+            style={{ fontSize: '0.8em', padding: '4px 8px' }}
+            onClick={() => setSelectedMetric(metric)}
+          >
+            {metric.charAt(0).toUpperCase() + metric.slice(1)}
+          </button>
+        ))}
       </div>
-      {message && <p style={{ color: 'var(--muted)' }}>{message}</p>}
 
-      <div className="dept-card" style={{ marginTop: 8 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input className="dept-input" style={{ flex: 1 }} value={headerTitle} onChange={(e) => setHeaderTitle(e.target.value)} />
-          <input className="dept-input" style={{ flex: 1 }} value={headerSubTitle} onChange={(e) => setHeaderSubTitle(e.target.value)} />
+      {/* Overview cards */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+        gap: 12,
+        marginBottom: 12
+      }}>
+        <div style={{ textAlign: 'center', padding: 8, backgroundColor: 'white', borderRadius: 4 }}>
+          <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#3498db' }}>
+            {overallStats.activeEvaluations}
+          </div>
+          <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>Active Evaluations</div>
         </div>
-        <div className="dept-table-responsive" style={{ marginTop: 8 }}>
-          <table className="dept-table-fixed">
-          <thead>
-            <tr>
-              <th align="left" style={{ width: 40 }}>#</th>
-              <th align="left">Evaluation Criteria</th>
-              <th align="center" style={{ width: 90 }}>{renderScaleHeader(scaleLabels.vlow)}</th>
-              <th align="center" style={{ width: 90 }}>{renderScaleHeader(scaleLabels.med)}</th>
-              <th align="center" style={{ width: 90 }}>{renderScaleHeader(scaleLabels.high)}</th>
-              <th align="center" style={{ width: 90 }}>{renderScaleHeader(scaleLabels.vhigh)}</th>
-              <th align="center" style={{ width: 120 }}>{renderScaleHeader(scaleLabels.na)}</th>
-              <th align="center" style={{ width: 120 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sections.map((sec, sidx) => (
-              <React.Fragment key={sec.key}>
-                <tr>
-                  <td colSpan={8} style={{ background: '#f9f9f9', padding: 8 }}>
-                    <input className="dept-input" style={{ width: '100%' }} value={sec.title} onChange={(e) => updateSectionTitle(sidx, e.target.value)} />
-                  </td>
-                </tr>
-                {sec.items.map((txt, idx) => {
-                  const number = sections.slice(0, sidx).reduce((acc, s) => acc + s.items.length, 0) + idx + 1;
-                  return (
-                    <tr key={`${sec.key}-${idx}`}>
-                      <td>{number}</td>
-                      <td>
-                        <input className="dept-input" style={{ width: '100%' }} value={txt} onChange={(e) => updateItem(sidx, idx, e.target.value)} />
-                      </td>
-                      {[1,2,3,4].map((n) => (
-                        <td key={n} align="center">○</td>
-                      ))}
-                      <td align="center">○</td>
-                      <td style={{ width: 120 }}>
-                        <button className="dept-btn dept-btn-ghost" onClick={() => removeItem(sidx, idx)}>Remove</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                <tr>
-                  <td colSpan={8} style={{ padding: 8 }}>
-                    <button className="dept-btn dept-btn-ghost" onClick={() => addItem(sidx)}>Add row</button>
-                  </td>
-                </tr>
-              </React.Fragment>
-            ))}
-          </tbody>
-          </table>
+        
+        <div style={{ textAlign: 'center', padding: 8, backgroundColor: 'white', borderRadius: 4 }}>
+          <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#27ae60' }}>
+            {overallStats.totalParticipation}
+          </div>
+          <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>Total Responses</div>
+        </div>
+        
+        <div style={{ textAlign: 'center', padding: 8, backgroundColor: 'white', borderRadius: 4 }}>
+          <div style={{ 
+            fontSize: '1.5em', 
+            fontWeight: 'bold', 
+            color: overallStats.averageParticipationRate >= 70 ? '#27ae60' : 
+                   overallStats.averageParticipationRate >= 40 ? '#f39c12' : '#e74c3c'
+          }}>
+            {overallStats.averageParticipationRate.toFixed(1)}%
+          </div>
+          <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>Avg Participation</div>
+        </div>
+        
+        <div style={{ textAlign: 'center', padding: 8, backgroundColor: 'white', borderRadius: 4 }}>
+          <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#e74c3c' }}>
+            {overallStats.lowParticipationCount}
+          </div>
+          <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>Low Participation</div>
         </div>
       </div>
+
+      {/* Detailed view based on selected metric */}
+      {selectedMetric === 'participation' && (
+        <div>
+          <h6 style={{ margin: '8px 0', color: '#2c3e50' }}>Participation Breakdown</h6>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {evaluations.filter(ev => !ev.closed_at).map(ev => {
+              const participation = getParticipationForEvaluation(ev.id);
+              return (
+                <div key={ev.id} style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: 8,
+                  backgroundColor: 'white',
+                  borderRadius: 4,
+                  fontSize: '0.8em'
+                }}>
+                  <span>{ev.course?.title} - {ev.teacher?.name}</span>
+                  <ParticipationIndicator 
+                    evaluationId={ev.id}
+                    getParticipationForEvaluation={getParticipationForEvaluation}
+                    eligibleStudents={eligibleStudents}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -293,6 +328,56 @@ function DepartmentEvaluations() {
   const [department, setDepartment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // State management for evaluations and participation
+  const [evaluations, setEvaluations] = useState([]);
+  const [participationData, setParticipationData] = useState({});
+  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  // Simple refresh functions
+  const refreshEvaluations = useCallback(async () => {
+    try {
+      const response = await api.get(`/evaluations?department_id=${deptId}&academic_year=${academicYear}&semester=${semester}`);
+      setEvaluations(response.data?.data || response.data || []);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Failed to refresh evaluations:', error);
+      // Don't show error to user for background refresh failures
+      // The UI will show stale data which is acceptable
+    }
+  }, [deptId]);
+
+  const refreshParticipation = useCallback(async () => {
+    // Simple participation data refresh
+    setLastUpdate(new Date());
+  }, []);
+
+  const reconnectEvaluations = useCallback(() => {
+    refreshEvaluations();
+  }, [refreshEvaluations]);
+
+  const reconnectParticipation = useCallback(() => {
+    refreshParticipation();
+  }, [refreshParticipation]);
+
+  const getParticipationForEvaluation = useCallback((evaluationId) => {
+    // Simple participation calculation
+    const evaluation = evaluations.find(e => e.id === evaluationId);
+    if (!evaluation) {
+      return { count: 0, rate: 0, lastSubmissionAt: null };
+    }
+    
+    const count = evaluation.feedbacks?.length || 0;
+    const expected = evaluation.course?.enrolled_students || 0;
+    const rate = expected > 0 ? (count / expected) * 100 : 0;
+    
+    return {
+      count,
+      rate,
+      lastSubmissionAt: evaluation.updated_at
+    };
+  }, [evaluations]);
 
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -306,8 +391,6 @@ function DepartmentEvaluations() {
 
   const [evalForm, setEvalForm] = useState({ course_id: '', teacher_id: '', year_level: '1', opened_at: '', closed_at: '' });
   const [evalSubmitting, setEvalSubmitting] = useState(false);
-  const [evaluations, setEvaluations] = useState([]);
-  const [evalLoading, setEvalLoading] = useState(false);
   const [selectedEvalId, setSelectedEvalId] = useState(null);
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -319,6 +402,52 @@ function DepartmentEvaluations() {
   const [evalSortDir, setEvalSortDir] = useState('desc');
   const [evalPage, setEvalPage] = useState(1);
   const [evalPageSize, setEvalPageSize] = useState(5);
+
+  // Enhanced state for monitoring and analytics
+  const [analyticsData, setAnalyticsData] = useState({});
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [weightedScores, setWeightedScores] = useState({});
+  const [comprehensiveStats, setComprehensiveStats] = useState({});
+  
+  // Enhanced filtering and sorting state
+  const [advancedFilters, setAdvancedFilters] = useState({
+    status: 'all', // all, active, closed
+    performanceRange: 'all', // all, high, medium, low
+    participationRange: 'all' // all, high, medium, low
+  });
+  
+  // Monitoring state
+  const [monitoringEnabled, setMonitoringEnabled] = useState(true);
+  const [updateFrequency, setUpdateFrequency] = useState(30000); // 30 seconds
+  const [participationAlerts, setParticipationAlerts] = useState([]);
+  const [lowParticipationThreshold, setLowParticipationThreshold] = useState(30); // 30%
+
+  // Template management state
+  const [currentTemplate, setCurrentTemplate] = useState(null);
+  const [templateQuestions, setTemplateQuestions] = useState([]);
+  const [templateLoading, setTemplateLoading] = useState(false);
+
+  // Load department template
+  const loadDepartmentTemplate = useCallback(async () => {
+    if (!deptId) return;
+    
+    setTemplateLoading(true);
+    try {
+      const response = await api.get(`/departments/${deptId}/template`);
+      setCurrentTemplate(response.data.template);
+      setTemplateQuestions(response.data.questions || []);
+    } catch (error) {
+      console.error('Failed to load department template:', error);
+      // Don't show error to user - template might not exist yet
+    } finally {
+      setTemplateLoading(false);
+    }
+  }, [deptId]);
+
+  // Refresh template data
+  const refreshTemplate = useCallback(() => {
+    loadDepartmentTemplate();
+  }, [loadDepartmentTemplate]);
 
   useEffect(() => { setAcademicYear(currentYear); }, [currentYear]);
 
@@ -334,19 +463,122 @@ function DepartmentEvaluations() {
     return () => { mounted = false; };
   }, [deptId]);
 
-  const loadEvaluations = async () => {
-    setEvalLoading(true);
+  // Load department template when department changes
+  useEffect(() => {
+    if (deptId) {
+      loadDepartmentTemplate();
+    }
+  }, [deptId, loadDepartmentTemplate]);
+
+  // Load analytics data for evaluations
+  const loadAnalyticsData = async (evaluationId, signal) => {
     try {
-      const res = await api.get('/evaluations', { params: { department_id: deptId, academic_year: academicYear, semester } });
-      setEvaluations(res.data?.data || []);
+      const res = await api.get(`/evaluations/${evaluationId}/analytics`, signal ? { signal } : undefined);
+      const analytics = res.data;
+      
+      setAnalyticsData(prev => ({
+        ...prev,
+        [evaluationId]: analytics
+      }));
+
+      // Calculate weighted scores (Student 50%, Peer 30%, Admin 20%)
+      if (analytics.student_score !== undefined && analytics.peer_score !== undefined && analytics.admin_score !== undefined) {
+        const weightedScore = (analytics.student_score * 0.5) + (analytics.peer_score * 0.3) + (analytics.admin_score * 0.2);
+        const performancePercentage = (weightedScore / 5) * 100;
+        
+        setWeightedScores(prev => ({
+          ...prev,
+          [evaluationId]: {
+            weighted_score: weightedScore,
+            performance_percentage: performancePercentage,
+            student_score: analytics.student_score,
+            peer_score: analytics.peer_score,
+            admin_score: analytics.admin_score
+          }
+        }));
+      }
+
+      // Calculate comprehensive stats
+      if (analytics.total_responses > 0) {
+        const avgRating = analytics.average_rating || 0;
+        let performanceCategory = 'needs_improvement';
+        
+        if (avgRating >= 4.5) performanceCategory = 'excellent';
+        else if (avgRating >= 4.0) performanceCategory = 'very_good';
+        else if (avgRating >= 3.5) performanceCategory = 'good';
+        else if (avgRating >= 3.0) performanceCategory = 'satisfactory';
+        
+        const statisticalSignificance = analytics.total_responses >= 10 ? 'significant' : 'limited';
+        
+        setComprehensiveStats(prev => ({
+          ...prev,
+          [evaluationId]: {
+            average_rating: avgRating,
+            total_responses: analytics.total_responses,
+            performance_category: performanceCategory,
+            statistical_significance: statisticalSignificance
+          }
+        }));
+      }
     } catch (e) {
-      // ignore errors to keep UX simple
-    } finally {
-      setEvalLoading(false);
+      const msg = typeof e.message === 'string' ? e.message.toLowerCase() : '';
+      const isCanceled = e.code === 'ERR_CANCELED' || e.name === 'CanceledError' || e.name === 'AbortError' || msg.includes('aborted') || msg.includes('canceled') || msg.includes('cancelled');
+      if (!isCanceled) {
+        console.error('Failed to load analytics for evaluation', evaluationId, e);
+      }
     }
   };
 
-  useEffect(() => { if (deptId && academicYear && semester) loadEvaluations(); }, [deptId, academicYear, semester]);
+  // Load analytics for all evaluations when they change
+  useEffect(() => {
+    if (evaluations.length > 0) {
+      const controller = new AbortController();
+      evaluations.forEach(evaluation => {
+        loadAnalyticsData(evaluation.id, controller.signal);
+      });
+      return () => controller.abort();
+    }
+  }, [evaluations]);
+
+  // Generate participation alerts based on data
+  useEffect(() => {
+    const alerts = [];
+    
+    Object.entries(participationData).forEach(([evaluationId, data]) => {
+      const evaluation = evaluations.find(ev => ev.id === parseInt(evaluationId));
+      if (evaluation && !evaluation.closed_at && data.rate < lowParticipationThreshold) {
+        alerts.push({
+          evaluationId: parseInt(evaluationId),
+          type: 'low_participation',
+          message: `Low participation (${data.rate.toFixed(1)}%) in evaluation ${evaluationId}`,
+          severity: data.rate < 15 ? 'high' : 'medium'
+        });
+      }
+    });
+    
+    setParticipationAlerts(alerts);
+  }, [participationData, evaluations, lowParticipationThreshold]);
+
+  // Manual refresh function for both evaluations and participation
+  const refreshAllData = useCallback(() => {
+    refreshEvaluations();
+    refreshParticipation();
+  }, [refreshEvaluations, refreshParticipation]);
+
+  // Manual refresh function
+  const refreshAll = useCallback(() => {
+    refreshEvaluations();
+    refreshParticipation();
+  }, [refreshEvaluations, refreshParticipation]);
+
+  // Load initial data when department changes
+  useEffect(() => { 
+    if (deptId && academicYear && semester) {
+      refreshAllData();
+    }
+  }, [deptId, academicYear, semester, refreshAllData]);
+
+  // Session evaluations list moved to Manage Evaluations page
 
   const teacherOptions = department?.teachers || [];
   const courseOptions = department?.courses || [];
@@ -372,7 +604,9 @@ function DepartmentEvaluations() {
       setEvalForm({ course_id: '', teacher_id: '', year_level: '1', opened_at: '', closed_at: '' });
       alert('Evaluation opened successfully');
     } catch (e) {
-      alert('Failed to open evaluation');
+      console.error('Failed to open evaluation:', e);
+      const errorMessage = e.response?.data?.message || e.message || 'Failed to open evaluation. Please try again.';
+      alert(errorMessage);
     } finally {
       setEvalSubmitting(false);
     }
@@ -384,7 +618,9 @@ function DepartmentEvaluations() {
       setEvaluations((prev) => prev.map((ev) => ev.id === evaluation.id ? { ...ev, closed_at: new Date().toISOString().slice(0, 10) } : ev));
       alert('Evaluation closed');
     } catch (e) {
-      alert('Failed to close evaluation');
+      console.error('Failed to close evaluation:', e);
+      const errorMessage = e.response?.data?.message || e.message || 'Failed to close evaluation. Please try again.';
+      alert(errorMessage);
     }
   };
 
@@ -488,25 +724,172 @@ function DepartmentEvaluations() {
       </div>
 
       <div className="dept-card" style={{ marginTop: 12 }}>
-        <h4>Editable Table Form</h4>
-        <p style={{ color: 'var(--muted)' }}>Create an editable table like the provided photo; all texts are editable. Save will convert rows to rating questions.</p>
-        <EvaluationTableBuilder evaluations={evaluations} onSaved={loadEvaluations} />
+        <h4>Department Evaluation Template</h4>
+        <p style={{ color: 'var(--muted)' }}>Configure the evaluation questions that will be used for all evaluations in this department. Students will see these questions when filling out any evaluation.</p>
+        {templateLoading ? (
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <p>Loading template...</p>
+          </div>
+        ) : (
+          <DepartmentTemplateManager 
+            departmentId={deptId}
+            template={currentTemplate}
+            questions={templateQuestions}
+            onTemplateSaved={refreshTemplate}
+          />
+        )}
       </div>
 
-      <div className="dept-card" style={{ marginTop: 12 }}>
-        <h4>Session Evaluations ({academicYear}, {semester})</h4>
+      {false && (<div className="dept-card" style={{ marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h4>Session Evaluations ({academicYear}, {semester})</h4>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* Connection Status Indicator */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 4, 
+              padding: '4px 8px',
+              borderRadius: 4,
+              fontSize: '0.8em',
+              backgroundColor: '#f8f9fa',
+              border: '1px solid #dee2e6'
+            }}>
+              <span>🔄</span>
+              <span style={{ color: '#6c757d' }}>
+                Manual Refresh Mode
+              </span>
+            </div>
+            
+            <button 
+              className="dept-btn dept-btn-primary"
+              onClick={refreshAll}
+              title="Refresh data"
+            >
+              🔄 Refresh
+            </button>
+            <button 
+              className="dept-btn dept-btn-ghost"
+              onClick={refreshAllData}
+              title="Manually refresh all data"
+            >
+              🔄 Refresh
+            </button>
+            {lastUpdate && (
+              <span style={{ color: 'var(--muted)', fontSize: '0.8em' }}>
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Live Analytics Dashboard removed per request */}
+
+        {/* Participation Alerts */}
+        {participationAlerts.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <h5 style={{ color: '#e74c3c', marginBottom: 8 }}>⚠️ Participation Alerts</h5>
+            {participationAlerts.map((alert, index) => (
+              <div 
+                key={index}
+                className={alert.severity === 'high' ? 'low-participation-alert' : ''}
+                style={{ 
+                  padding: 8, 
+                  backgroundColor: alert.severity === 'high' ? '#ffebee' : '#fff3e0',
+                  border: `1px solid ${alert.severity === 'high' ? '#e74c3c' : '#ff9800'}`,
+                  borderRadius: 4,
+                  marginBottom: 4,
+                  fontSize: '0.9em',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>{alert.message}</span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {alert.severity === 'high' && (
+                    <span style={{ 
+                      fontSize: '0.7em', 
+                      padding: '2px 6px', 
+                      backgroundColor: '#e74c3c', 
+                      color: 'white', 
+                      borderRadius: 3,
+                      fontWeight: 'bold'
+                    }}>
+                      URGENT
+                    </span>
+                  )}
+                  <button 
+                    className="dept-btn dept-btn-ghost"
+                    style={{ fontSize: '0.7em', padding: '2px 6px' }}
+                    onClick={() => {
+                      // Navigate to specific evaluation
+                      setSelectedEvalId(alert.evaluationId);
+                    }}
+                  >
+                    View
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Enhanced Filters */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8, marginBottom: 16 }}>
+          <input 
+            className="dept-input" 
+            placeholder="Filter by course/instructor" 
+            value={evalFilter} 
+            onChange={(e) => { setEvalPage(1); setEvalFilter(e.target.value); }} 
+          />
+          <select 
+            className="dept-select" 
+            value={advancedFilters.status} 
+            onChange={(e) => setAdvancedFilters(prev => ({ ...prev, status: e.target.value }))}
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+            <option value="closed">Closed Only</option>
+          </select>
+          <select 
+            className="dept-select" 
+            value={advancedFilters.performanceRange} 
+            onChange={(e) => setAdvancedFilters(prev => ({ ...prev, performanceRange: e.target.value }))}
+          >
+            <option value="all">All Performance</option>
+            <option value="high">High Performance</option>
+            <option value="medium">Medium Performance</option>
+            <option value="low">Low Performance</option>
+          </select>
+          <select 
+            className="dept-select" 
+            value={advancedFilters.participationRange} 
+            onChange={(e) => setAdvancedFilters(prev => ({ ...prev, participationRange: e.target.value }))}
+          >
+            <option value="all">All Participation</option>
+            <option value="high">High Participation (70%+)</option>
+            <option value="medium">Medium Participation (40-70%)</option>
+            <option value="low">Low Participation (&lt;40%)</option>
+          </select>
+        </div>
+
+        {/* Sort and Display Options */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
-          <input className="dept-input" placeholder="Filter by course/instructor" value={evalFilter} onChange={(e) => { setEvalPage(1); setEvalFilter(e.target.value); }} />
           <label>
             Sort by
             <select className="dept-select" value={evalSortKey} onChange={(e) => setEvalSortKey(e.target.value)}>
-              <option value="opened_at">Opened</option>
-              <option value="closed_at">Closed</option>
+              <option value="opened_at">Opened Date</option>
+              <option value="closed_at">Closed Date</option>
               <option value="course">Course</option>
               <option value="teacher">Instructor</option>
+              <option value="participation">Participation Rate</option>
+              <option value="performance">Performance Score</option>
             </select>
           </label>
-          <button className="dept-btn dept-btn-ghost" onClick={() => setEvalSortDir((d) => d === 'asc' ? 'desc' : 'asc')}>{evalSortDir === 'asc' ? 'Asc' : 'Desc'}</button>
+          <button className="dept-btn dept-btn-ghost" onClick={() => setEvalSortDir((d) => d === 'asc' ? 'desc' : 'asc')}>
+            {evalSortDir === 'asc' ? '↑ Asc' : '↓ Desc'}
+          </button>
           <label>
             Page size
             <select className="dept-select" value={evalPageSize} onChange={(e) => { setEvalPage(1); setEvalPageSize(Number(e.target.value)); }}>
@@ -516,111 +899,173 @@ function DepartmentEvaluations() {
             </select>
           </label>
         </div>
-        {evalLoading && <p>Loading evaluations…</p>}
-        {!evalLoading && evaluations.length === 0 && <p style={{ color: 'var(--muted)' }}>No evaluations for this session.</p>}
-        {!evalLoading && evaluations.length > 0 && (
+        {loading && <p>Loading evaluations…</p>}
+        {!loading && evaluations.length === 0 && <p style={{ color: 'var(--muted)' }}>No evaluations for this session.</p>}
+        {!loading && evaluations.length > 0 && (
           (() => {
-            const filtered = evaluations.filter((ev) => {
-              const s = `${ev.course?.title} ${ev.course?.code} ${ev.teacher?.name}`.toLowerCase();
-              return s.includes(evalFilter.toLowerCase());
-            });
-            const sorted = filtered.sort((a, b) => {
-              const dir = evalSortDir === 'asc' ? 1 : -1;
-              if (evalSortKey === 'course') return dir * String(a.course?.title || '').localeCompare(String(b.course?.title || ''));
-              if (evalSortKey === 'teacher') return dir * String(a.teacher?.name || '').localeCompare(String(b.teacher?.name || ''));
-              if (evalSortKey === 'closed_at') return dir * String(a.closed_at || '').localeCompare(String(b.closed_at || ''));
-              return dir * String(a.opened_at || '').localeCompare(String(b.opened_at || ''));
-            });
-            const total = sorted.length;
+            const filteredAndSorted = getFilteredAndSortedEvaluations();
+            const total = filteredAndSorted.length;
             const start = (evalPage - 1) * evalPageSize;
-            const pageItems = sorted.slice(start, start + evalPageSize);
+            const pageItems = filteredAndSorted.slice(start, start + evalPageSize);
             const pageCount = Math.max(1, Math.ceil(total / evalPageSize));
             return (
-          <div className="dept-table-responsive">
-          <table className="dept-table-fixed">
-            <thead>
-              <tr>
-                <th align="left">Course</th>
-                <th align="left">Instructor</th>
-                <th align="left">Year</th>
-                <th align="left">Opened</th>
-                <th align="left">Closed</th>
-                <th align="left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.map((ev) => (
-                <tr key={ev.id}>
-                  <td>{ev.course?.title} ({ev.course?.code})</td>
-                  <td>{ev.teacher?.name}</td>
-                  <td>{ev.year_level ? `Year ${ev.year_level}` : '—'}</td>
-                  <td>{ev.opened_at}</td>
-                  <td>{ev.closed_at || '—'}</td>
-                  <td style={{ display: 'flex', gap: 8 }}>
-                    <button className="dept-btn dept-btn-primary" onClick={() => setSelectedEvalId(ev.id)}>View Results</button>
-                    {!ev.closed_at && (
-                      <button className="dept-btn dept-btn-ghost" onClick={() => closeEvaluation(ev)}>Close</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+              <div>
+                <div className="dept-table-responsive">
+                  <table className="dept-table-fixed">
+                    <thead>
+                      <tr>
+                        <th align="left">Course</th>
+                        <th align="left">Instructor</th>
+                        <th align="left">Year</th>
+                        <th align="left">Status</th>
+                        <th align="left">Participation</th>
+                        {showAnalytics && <th align="left">Performance</th>}
+                        {showAnalytics && <th align="left">Weighted Score</th>}
+                        <th align="left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageItems.map((ev) => {
+                        const participation = participationData[ev.id];
+                        const stats = comprehensiveStats[ev.id];
+                        const weightedScore = weightedScores[ev.id];
+                        
+                        return (
+                          <tr key={ev.id}>
+                            <td>{ev.course?.title} ({ev.course?.code})</td>
+                            <td>{ev.teacher?.name}</td>
+                            <td>{ev.year_level ? `Year ${ev.year_level}` : '—'}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span 
+                                  style={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    backgroundColor: ev.closed_at ? '#95a5a6' : '#27ae60',
+                                    display: 'inline-block'
+                                  }}
+                                />
+                                {ev.closed_at ? 'Closed' : 'Active'}
+                              </div>
+                            </td>
+                            <td>
+                              <ParticipationIndicator 
+                                evaluationId={ev.id}
+                                getParticipationForEvaluation={getParticipationForEvaluation}
+                                eligibleStudents={department?.students?.length || 0}
+                                lowParticipationThreshold={lowParticipationThreshold}
+                              />
+                            </td>
+                            {showAnalytics && (
+                              <td>
+                                {stats ? (
+                                  <div style={{ minWidth: 100 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9em' }}>
+                                      {stats.average_rating.toFixed(2)}/5.0
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: '0.7em', 
+                                      color: stats.performance_category === 'excellent' ? '#27ae60' :
+                                             stats.performance_category === 'very_good' ? '#2ecc71' :
+                                             stats.performance_category === 'good' ? '#f39c12' :
+                                             stats.performance_category === 'satisfactory' ? '#e67e22' :
+                                             stats.performance_category === 'needs_improvement' ? '#e74c3c' : '#95a5a6'
+                                    }}>
+                                      {stats.performance_category.replace('_', ' ').toUpperCase()}
+                                    </div>
+                                    <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>
+                                      {stats.total_responses} responses
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: 'var(--muted)' }}>No data</span>
+                                )}
+                              </td>
+                            )}
+                            {showAnalytics && (
+                              <td>
+                                {weightedScore ? (
+                                  <div style={{ minWidth: 120 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9em' }}>
+                                      {weightedScore.performance_percentage.toFixed(1)}%
+                                    </div>
+                                    <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>
+                                      S:{weightedScore.student_score.toFixed(1)} P:{weightedScore.peer_score.toFixed(1)} A:{weightedScore.admin_score.toFixed(1)}
+                                    </div>
+                                    <div style={{ fontSize: '0.7em', color: 'var(--muted)' }}>
+                                      (50% + 30% + 20%)
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: 'var(--muted)' }}>No data</span>
+                                )}
+                              </td>
+                            )}
+                            <td style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              <button className="dept-btn dept-btn-primary" onClick={() => setSelectedEvalId(ev.id)}>
+                                View Results
+                              </button>
+                              {!ev.closed_at && (
+                                <button className="dept-btn dept-btn-ghost" onClick={() => closeEvaluation(ev)}>
+                                  Close
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Enhanced Pagination */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                  <div style={{ color: 'var(--muted)', fontSize: '0.9em' }}>
+                    Showing {start + 1}-{Math.min(start + evalPageSize, total)} of {total} evaluations
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button 
+                      className="dept-btn dept-btn-ghost" 
+                      disabled={evalPage <= 1} 
+                      onClick={() => setEvalPage(1)}
+                    >
+                      First
+                    </button>
+                    <button 
+                      className="dept-btn dept-btn-ghost" 
+                      disabled={evalPage <= 1} 
+                      onClick={() => setEvalPage(p => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </button>
+                    <span style={{ color: 'var(--muted)' }}>
+                      Page {evalPage} of {pageCount}
+                    </span>
+                    <button 
+                      className="dept-btn dept-btn-ghost" 
+                      disabled={evalPage >= pageCount} 
+                      onClick={() => setEvalPage(p => Math.min(pageCount, p + 1))}
+                    >
+                      Next
+                    </button>
+                    <button 
+                      className="dept-btn dept-btn-ghost" 
+                      disabled={evalPage >= pageCount} 
+                      onClick={() => setEvalPage(pageCount)}
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              </div>
             );
           })()
         )}
-        {!evalLoading && evaluations.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-            <button className="dept-btn dept-btn-ghost" disabled={evalPage <= 1} onClick={() => setEvalPage((p) => Math.max(1, p - 1))}>Prev</button>
-            <span style={{ color: 'var(--muted)' }}>Page {evalPage}</span>
-            <button className="dept-btn dept-btn-ghost" onClick={() => setEvalPage((p) => p + 1)}>Next</button>
-          </div>
-        )}
-      </div>
 
-      <div className="dept-card" style={{ marginTop: 12 }}>
-        <h3>Teacher Evaluation Results</h3>
-        <p style={{ color: 'var(--muted)' }}>Aggregated ratings and sample comments for the selected evaluation.</p>
-        {!selectedEvalId && <p style={{ color: 'var(--muted)' }}>Select "View Results" on an evaluation.</p>}
-        {summaryLoading && <p>Loading summary…</p>}
-        {summary && (
-          <div style={{ marginTop: 8 }}>
-            <p><strong>Course:</strong> {summary.course?.title} ({summary.course?.code})</p>
-            <p><strong>Instructor:</strong> {summary.teacher?.name}</p>
-            <p><strong>Session:</strong> {summary.academic_year}, {summary.semester}</p>
-            <p><strong>Feedbacks:</strong> {summary.total_feedbacks}</p>
-            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-              <button className="dept-btn dept-btn-ghost" onClick={exportSummaryCSV}>Download CSV</button>
-              <span style={{ color: 'var(--muted)' }}>Lock status: {summary.closed_at ? 'Locked' : 'Open'}</span>
-            </div>
-            <div className="dept-card" style={{ marginTop: 12 }}>
-              <h4>Participation</h4>
-              {detailLoading && <p>Loading details…</p>}
-              {evalDetail && (
-                <div>
-                  <div style={{ color: 'var(--muted)' }}>Students in department: {department?.students?.length ?? 0}</div>
-                  <div style={{ color: 'var(--muted)' }}>Feedbacks received: {evalDetail.feedbacks?.length ?? 0}</div>
-                  <div style={{ marginTop: 6 }}>
-                    <progress value={evalDetail.feedbacks?.length ?? 0} max={Math.max(1, department?.students?.length ?? 1)} />
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="dept-card" style={{ marginTop: 12 }}>
-              <h4>Question Summaries</h4>
-              {summary.questions?.length === 0 && <p style={{ color: 'var(--muted)' }}>No responses yet.</p>}
-              {summary.questions?.map((q) => (
-                <div key={q.question_id} style={{ marginBottom: 10 }}>
-                  <div>Question #{q.question_id}</div>
-                  <div style={{ color: 'var(--muted)' }}>Average rating: {q.average_rating ?? '—'}</div>
-                  <div style={{ color: 'var(--muted)' }}>Responses: {q.responses_count ?? 0}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      </div>)}
+
+      {/* Comprehensive Evaluation Results section removed per request */}
     </div>
   );
 }

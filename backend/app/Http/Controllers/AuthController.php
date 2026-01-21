@@ -90,10 +90,21 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return response()->json(['message' => 'Logged out']);
+        try {
+            Auth::logout();
+            
+            // Only invalidate session if it exists (for web routes)
+            if ($request->hasSession()) {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
+            
+            return response()->json(['message' => 'Logged out']);
+        } catch (\Exception $e) {
+            // Log the error but still return success for API consistency
+            \Log::warning('Logout warning: ' . $e->getMessage());
+            return response()->json(['message' => 'Logged out']);
+        }
     }
 
     public function changePassword(Request $request)

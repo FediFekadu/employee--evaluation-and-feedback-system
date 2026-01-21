@@ -1,0 +1,70 @@
+/* Compact Evaluation Cards (Results Grid) */
+.evaluations-cards-grid .evaluation-card {
+  margin-bottom: 12px;
+  border-radius: 10px;
+}
+
+.evaluations-cards-grid .card-header {
+  padding: 14px;
+}
+
+.evaluations-cards-grid .course-title {
+  font-size: 16px;
+}
+
+.evaluations-cards-grid .course-code {
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.evaluations-cards-grid .card-body {
+  padding: 16px;
+}
+
+.evaluations-cards-grid .instructor-section {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.evaluations-cards-grid .instructor-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.evaluations-cards-grid .participation-section {
+  margin-bottom: 14px;
+}
+
+.evaluations-cards-grid .final-score-badge .score-value {
+  font-size: 16px;
+}
+
+.evaluations-cards-grid .final-score-badge .performance-level {
+  font-size: 12px;
+}
+
+.evaluations-cards-grid .score-mini-breakdown {
+  gap: 8px;
+}
+
+.evaluations-cards-grid .mini-score-item .mini-label,
+.evaluations-cards-grid .mini-score-item .mini-weight {
+  font-size: 12px;
+}
+
+.evaluations-cards-grid .mini-score-item .mini-value {
+  font-size: 13px;
+}
+
+.evaluations-cards-grid .card-actions {
+  padding-top: 12px;
+}
+
+.evaluations-cards-grid .card-action-btn {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.evaluations-cards-grid .evaluation-id {
+  font-size: 12px;
+}
