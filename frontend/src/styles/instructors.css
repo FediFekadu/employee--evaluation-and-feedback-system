@@ -1,0 +1,45 @@
+/* Instructors grid - compact professional cards */
+.instructors-grid.compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.instructor-card.compact {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  overflow: hidden;
+  max-width: 720px;
+}
+.instructor-card.compact .card-top { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; }
+.instructor-card.compact .instructor-avatar.small { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--accent)); color: #041b1f; font-weight: 700; }
+.instructor-card.compact .instructor-info { min-width: 0; }
+.instructor-card.compact .instructor-info .name-row { display: flex; gap: 8px; align-items: baseline; }
+.instructor-card.compact .instructor-name { font-weight: 600; }
+.instructor-card.compact .title-badge { font-size: 12px; padding: 2px 6px; border-radius: 8px; border: 1px solid var(--border-soft); color: var(--muted); }
+.instructor-card.compact .meta-row { font-size: 12px; color: var(--muted); min-width: 0; }
+.instructor-card.compact .compact-stats { display: flex; gap: 8px; flex-wrap: nowrap; }
+.instructor-card.compact .stat-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; border: 1px solid var(--border-soft); border-radius: 999px; font-size: 12px; background: var(--bg-soft); }
+.instructor-card.compact .stat-chip .label { color: var(--muted); }
+.instructor-card.compact .stat-chip .value { font-weight: 700; }
+.instructor-card.compact .card-actions { display: flex; gap: 8px; justify-content: flex-end; align-self: center; white-space: nowrap; }
+.instructor-card.compact .action-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-soft); background: transparent; color: var(--text); font-size: 12px; cursor: pointer; }
+.instructor-card.compact .action-btn.view { border-color: var(--primary); }
+.instructor-card.compact .action-btn:hover { background: var(--hover-bg); }
+.instructor-card.compact.expanded { padding-bottom: 12px; }
+.instructor-card.compact .card-details { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
+.instructor-card.compact .section-title { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.instructor-card.compact .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.instructor-card.compact .course-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 8px; font-size: 12px; }
+.instructor-card.compact .course-chip .code { font-weight: 700; }
+.instructor-card.compact .course-chip .sep { color: var(--muted); }
+.instructor-card.compact .empty-inline { font-size: 12px; color: var(--muted); }
+.instructor-card.compact .evaluations-summary .summary-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.instructor-card.compact .summary-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 8px; font-size: 12px; }
+.instructor-card.compact .summary-chip .value { font-weight: 700; }
+.instructor-card.compact .summary-link { color: var(--primary); text-decoration: none; font-size: 12px; }
+.loading-inline { display: inline-flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }

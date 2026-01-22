@@ -1,0 +1,134 @@
+/* Statistics Overview styles: professional SaaS theme */
+
+:root {
+  --deep-blue: #1e293b; /* header/navy */
+  --action-blue: #3b82f6; /* primary accent */
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --card-bg: #ffffff;
+}
+
+.stats-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stats-title {
+  color: var(--deep-blue);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+
+.stats-subtitle {
+  color: var(--slate-500);
+  font-size: 14px;
+}
+
+.stats-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(30,41,59,0.08);
+  border-radius: 8px;
+  padding: 6px;
+  background: #f8fafc;
+}
+
+.stats-actions .live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid rgba(59,130,246,0.25);
+}
+
+.stats-actions .live-toggle .label {
+  color: var(--slate-600);
+  font-weight: 600;
+}
+
+.stats-actions .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(30,41,59,0.08);
+  background: #fff;
+  color: var(--slate-600);
+}
+
+.stats-actions .export-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Card */
+.stat-card {
+  position: relative;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  padding: 16px;
+  min-height: 96px;
+}
+
+.stat-card .metric {
+  color: var(--deep-blue);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.stat-card .label {
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stat-card .stat-card-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+/* Icon color schemes with 15% opacity background */
+.stat-card .icon-blue { color: #3b82f6; background: rgba(59,130,246,0.15); }
+.stat-card .icon-green { color: #10b981; background: rgba(16,185,129,0.15); }
+.stat-card .icon-amber { color: #f59e0b; background: rgba(245,158,11,0.15); }
+.stat-card .icon-slate { color: #64748b; background: rgba(100,116,139,0.15); }
+
+/* Responsive: stack on small screens */
+@media (max-width: 1024px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .stats-header { flex-direction: column; align-items: flex-start; }
+  .stats-grid { grid-template-columns: 1fr; }
+}

@@ -15,6 +15,9 @@ function DepartmentInstructors() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
+  const [detailsById, setDetailsById] = useState({});
+  const [loadingDetailsId, setLoadingDetailsId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -65,6 +68,24 @@ function DepartmentInstructors() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const loadInstructorDetails = async (instructorId) => {
+    if (detailsById[instructorId]) return;
+    setLoadingDetailsId(instructorId);
+    try {
+      const res = await api.get(`/teachers/${instructorId}`);
+      setDetailsById((prev) => ({ ...prev, [instructorId]: res.data }));
+    } catch (e) {
+      // Silently fail in UI; counts will show as 0/—
+    } finally {
+      setLoadingDetailsId(null);
+    }
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+    loadInstructorDetails(id);
   };
 
   if (loading) {
@@ -148,8 +169,8 @@ function DepartmentInstructors() {
             </div>
           </div>
 
-          {/* Instructors Grid */}
-          <div className="instructors-grid">
+          {/* Instructors Grid (Compact, responsive) */}
+          <div className="instructors-grid compact">
             {filteredInstructors.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">👨‍🏫</div>
@@ -163,52 +184,117 @@ function DepartmentInstructors() {
                 </button>
               </div>
             ) : (
-              filteredInstructors.map((instructor) => (
-                <div key={instructor.id} className="instructor-card">
-                  <div className="instructor-avatar">
-                    {instructor.name.charAt(0).toUpperCase()}
-                  </div>
-                  
-                  <div className="instructor-info">
-                    <h3 className="instructor-name">{instructor.name}</h3>
-                    {instructor.title && (
-                      <span className="instructor-title">{instructor.title}</span>
-                    )}
-                    <div className="instructor-contact">
-                      <div className="contact-item">
-                        <span className="contact-icon">📧</span>
-                        <span className="contact-text">{instructor.email || 'No email'}</span>
+              filteredInstructors.map((instructor) => {
+                const details = detailsById[instructor.id];
+                const coursesCount = details?.courses?.length ?? instructor.courses?.length ?? '—';
+                const evaluationsCount = details?.evaluations?.length ?? instructor.evaluations?.length ?? '—';
+
+                return (
+                  <div key={instructor.id} className={`instructor-card compact ${expandedId === instructor.id ? 'expanded' : ''}`}>
+                    <div className="card-top">
+                      <div className="instructor-avatar small">
+                        {instructor.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="instructor-info">
+                        <div className="name-row">
+                          <span className="instructor-name">{instructor.name}</span>
+                          {instructor.title && (
+                            <span className="title-badge">{instructor.title}</span>
+                          )}
+                        </div>
+                        <div className="meta-row">
+                          <span
+                            className="email-text"
+                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          >
+                            {instructor.email || '—'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="compact-stats">
+                        <div className="stat-chip">
+                          <span className="label">Courses</span>
+                          <span className="value">{coursesCount}</span>
+                          {loadingDetailsId === instructor.id && <span className="loading-dot" style={{ color: 'var(--text-muted)', marginLeft: 2 }}>•</span>}
+                        </div>
+                        <div className="stat-chip">
+                          <span className="label">Evaluations</span>
+                          <span className="value">{evaluationsCount}</span>
+                          {loadingDetailsId === instructor.id && <span className="loading-dot" style={{ color: 'var(--text-muted)', marginLeft: 2 }}>•</span>}
+                        </div>
+                      </div>
+                      <div className="card-actions">
+                        <button
+                          className="action-btn view"
+                          onClick={() => toggleExpand(instructor.id)}
+                          title={expandedId === instructor.id ? 'Hide details' : 'View details'}
+                        >
+                          {expandedId === instructor.id ? 'Hide' : 'Details'}
+                        </button>
+                        <button className="action-btn edit" title="Edit instructor">Edit</button>
                       </div>
                     </div>
+
+                    {expandedId === instructor.id && (
+                      <div className="card-details">
+                        {loadingDetailsId === instructor.id && !details && (
+                          <div className="loading-inline">
+                            <span className="loading-spinner small"></span>
+                            Loading details...
+                          </div>
+                        )}
+
+                        {details && (
+                          <>
+                            <div className="courses-list">
+                              <div className="section-title">Assigned Courses</div>
+                              {details.courses?.length ? (
+                                <div className="chips">
+                                  {details.courses.map((course) => (
+                                    <span key={course.id} className="course-chip">
+                                      <span className="code">{course.code}</span>
+                                      <span className="sep">·</span>
+                                      <span className="title">{course.title}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="empty-inline">No courses assigned</div>
+                              )}
+                            </div>
+
+                            <div className="evaluations-summary">
+                              <div className="section-title">Evaluations</div>
+                              <div className="summary-row">
+                                {(() => {
+                                  const evals = details.evaluations || [];
+                                  const today = new Date();
+                                  const openCount = evals.filter(e => {
+                                    const opened = e.opened_at ? new Date(e.opened_at) : null;
+                                    const closed = e.closed_at ? new Date(e.closed_at) : null;
+                                    return opened && opened <= today && (!closed || closed >= today);
+                                  }).length;
+                                  const closedCount = evals.length - openCount;
+                                  return (
+                                    <>
+                                      <div className="summary-chip">Total <span className="value">{evals.length}</span></div>
+                                      <div className="summary-chip">Open <span className="value">{openCount}</span></div>
+                                      <div className="summary-chip">Closed <span className="value">{closedCount}</span></div>
+                                    </>
+                                  );
+                                })()}
+                                <a className="summary-link" href={`/department/${deptId}/results`}>
+                                  View Results
+                                </a>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="instructor-actions">
-                    <button className="action-btn edit">
-                      <span>✏️</span>
-                      Edit
-                    </button>
-                    <button className="action-btn view">
-                      <span>👁️</span>
-                      View
-                    </button>
-                  </div>
-                  
-                  <div className="instructor-stats">
-                    <div className="stat-item">
-                      <span className="stat-value">
-                        {(instructor.courses || []).length}
-                      </span>
-                      <span className="stat-label">Courses</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="stat-value">
-                        {(instructor.evaluations || []).length}
-                      </span>
-                      <span className="stat-label">Evaluations</span>
-                    </div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

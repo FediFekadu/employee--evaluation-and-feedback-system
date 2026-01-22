@@ -64,6 +64,17 @@ class TeacherController extends Controller
     public function show(Teacher $teacher)
     {
         // Load department and courses (including pivot data if defined on the relation)
-        return $teacher->load(['department', 'courses']);
+        $teacher->load(['department', 'courses']);
+
+        // Also include evaluations associated with this teacher (with course relation)
+        // This helps the frontend display counts and recent activity compactly.
+        $evaluations = \App\Models\Evaluation::with(['course'])
+            ->where('teacher_id', $teacher->id)
+            ->orderByDesc('opened_at')
+            ->get();
+
+        $out = $teacher->toArray();
+        $out['evaluations'] = $evaluations->toArray();
+        return response()->json($out);
     }
 }

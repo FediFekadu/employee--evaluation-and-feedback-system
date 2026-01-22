@@ -2,6 +2,7 @@
 @import './styles/design-system.css';
 @import './styles/enhanced-dashboard.css';
 @import './styles/compact-cards.css';
+@import './styles/instructors.css';
 
 :root {
   --bg-start: #0d1324;
