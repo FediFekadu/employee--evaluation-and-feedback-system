@@ -61,15 +61,31 @@ function DepartmentEvaluationResultsWrapper() {
 }
 
 function App() {
-  const [theme, setTheme] = useState('dark');
+  // Initialize from localStorage synchronously to avoid flicker
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem('theme');
+      return stored || 'light';
+    }
+    return 'light';
+  });
   const navigate = useNavigate();
 
-  // Initialize theme from localStorage or system preference
+  // Keep theme synced across tabs/windows
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
-    const prefersLight = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    const initial = stored || (prefersLight ? 'light' : 'dark');
-    setTheme(initial);
+    const onStorage = (e) => {
+      if (e.key === 'theme' && e.newValue) {
+        setTheme(e.newValue);
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage);
+      }
+    };
   }, []);
 
   // Apply theme and persist

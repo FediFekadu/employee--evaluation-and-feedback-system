@@ -922,40 +922,45 @@ function StudentEvaluations() {
                 )}
                 {/* Modal Header */}
                 <div className="modal-header">
-                  <div className="university-header">
-                    <h2>BULE-HORA UNIVERSITY</h2>
-                    <h3>Teachers' Performance Evaluation Criteria To be filled by student</h3>
-                    <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-                      <span style={{ fontSize: '0.9em', color: 'var(--muted)' }}>Evaluation ID: {evalDetail?.id}</span>
-                      <span style={{ fontSize: '0.9em', color: 'var(--muted)' }}>Questions: {(evalDetail?.questions || []).length}</span>
+                  <div className="modal-hero">
+                    <div className="university-header">
+                      <h2>BULE-HORA UNIVERSITY</h2>
+                      <h3 className="brand-subtitle">Teachers' Performance Evaluation Criteria (Student)</h3>
+                      <div className="header-meta">
+                        <span>Evaluation ID: {evalDetail?.id}</span>
+                        <span>Questions: {(evalDetail?.questions || []).length}</span>
+                      </div>
                     </div>
+                    <button className="modal-close" onClick={() => setEvalDetail(null)}>
+                      ✕
+                    </button>
                   </div>
                   
                   <div className="evaluation-info">
-                    <div className="info-grid">
+                    <div className="info-grid info-chips">
                       <div className="info-item">
-                        <label>Name of the Instructor:</label>
-                        <span>{evalDetail.teacher?.name || 'N/A'}</span>
+                        <label>Name of the Instructor</label>
+                        <span className="value-chip">{evalDetail.teacher?.name || 'N/A'}</span>
                       </div>
                       <div className="info-item">
-                        <label>Course Title:</label>
-                        <span>{evalDetail.course?.title || 'N/A'}</span>
+                        <label>Course Title</label>
+                        <span className="value-chip">{evalDetail.course?.title || 'N/A'}</span>
                       </div>
                       <div className="info-item">
-                        <label>Department:</label>
-                        <span>{evalDetail.department?.name || 'N/A'}</span>
+                        <label>Department</label>
+                        <span className="value-chip">{evalDetail.department?.name || 'N/A'}</span>
                       </div>
                       <div className="info-item">
-                        <label>Year Level:</label>
-                        <span>{formatYearLevel(studentYearLevel)}</span>
+                        <label>Year Level</label>
+                        <span className="value-chip">{formatYearLevel(studentYearLevel)}</span>
                       </div>
                       <div className="info-item">
-                        <label>Academic Year:</label>
-                        <span>{evalDetail.academic_year || 'N/A'}</span>
+                        <label>Academic Year</label>
+                        <span className="value-chip">{evalDetail.academic_year || 'N/A'}</span>
                       </div>
                       <div className="info-item">
-                        <label>Semester:</label>
-                        <span>{evalDetail.semester || 'N/A'}</span>
+                        <label>Semester</label>
+                        <span className="value-chip">{evalDetail.semester || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
@@ -1021,6 +1026,15 @@ function StudentEvaluations() {
                       </div>
                     </div>
                     <table className="evaluation-table">
+                      <colgroup>
+                        <col style={{ width: '50%' }} />
+                        <col style={{ width: '8.33%' }} />
+                        <col style={{ width: '8.33%' }} />
+                        <col style={{ width: '8.33%' }} />
+                        <col style={{ width: '8.33%' }} />
+                        <col style={{ width: '8.33%' }} />
+                        <col style={{ width: '8.33%' }} />
+                      </colgroup>
                       <thead>
                         <tr className="table-header">
                           <th rowSpan="2" className="criteria-header">
@@ -1028,7 +1042,7 @@ function StudentEvaluations() {
                           </th>
                           <th colSpan="6" className="rating-header">Rating Scale</th>
                         </tr>
-                        <tr className="scale-header">
+                         <tr className="scale-header">
                           {[1, 2, 3, 4, 5].map(rating => (
                             <th key={rating} className="scale-column">
                               <div className="scale-label">
