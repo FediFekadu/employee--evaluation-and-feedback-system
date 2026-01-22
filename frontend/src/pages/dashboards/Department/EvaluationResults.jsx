@@ -100,7 +100,9 @@ function EvaluationResults() {
       const exportOptions = {
         departmentId: departmentId,
         preservePrivacy: true,
-        reportType: 'teacher'
+        reportType: 'teacher',
+        // Provide client-side fallback data when server rejects due to limited responses
+        fallbackData: evaluationResults
       };
 
       await exportEvaluation(evaluationId, format, exportOptions);

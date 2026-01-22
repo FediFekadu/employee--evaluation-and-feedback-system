@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import exportService from '../services/exportService';
+import { generateCsvFromEvaluationResults } from '../utils/csvFallback';
 
 /**
  * Custom hook for handling export operations with state management
@@ -121,7 +122,64 @@ export const useExport = () => {
         return result;
 
       } else {
-        // Handle export failure
+        // Attempt client-side fallback for limited data cases
+        const msg = (result.error || '').toLowerCase();
+        const isLimitedData = msg.includes('limited') || msg.includes('minimum responses');
+        const canClientFallback = ['csv', 'excel'].includes(String(format).toLowerCase()) && options.fallbackData;
+
+        if (isLimitedData && canClientFallback) {
+          try {
+            const { blob, filename } = generateCsvFromEvaluationResults(options.fallbackData, {
+              evaluationId,
+              preferredFilename: `evaluation_${evaluationId}_report.csv`
+            });
+
+            const downloadResult = exportService.downloadFile(blob, filename);
+            if (!downloadResult.success) throw new Error(downloadResult.error);
+
+            setExportState(prev => ({
+              ...prev,
+              loading: false,
+              progress: 100,
+              stage: 'completed',
+              notification: {
+                type: 'warning',
+                title: 'Export Completed with Warning',
+                message: 'Limited data detected. A lightweight CSV was generated client-side.',
+                details: `File: ${filename}`
+              }
+            }));
+
+            return { success: true, blob, filename, format: 'csv', evaluationId, warning: true };
+          } catch (fallbackError) {
+            // Fall back to error notification if client-side generation fails
+            const errorNotification = {
+              type: 'error',
+              title: 'Export Failed',
+              message: `Failed to generate ${format.toUpperCase()} report.`,
+              details: fallbackError.message || result.error
+            };
+
+            if (result.canRetry && result.retryFunction) {
+              errorNotification.onRetry = () => {
+                clearNotification();
+                return result.retryFunction();
+              };
+              errorNotification.retryText = `Retry (${result.attempts}/${result.maxRetries})`;
+            }
+
+            setExportState(prev => ({
+              ...prev,
+              loading: false,
+              error: fallbackError.message || result.error,
+              notification: errorNotification
+            }));
+
+            return { success: false, error: fallbackError.message || result.error };
+          }
+        }
+
+        // No fallback available; show error
         const errorNotification = {
           type: 'error',
           title: 'Export Failed',
@@ -129,7 +187,6 @@ export const useExport = () => {
           details: result.error
         };
 
-        // Add retry option if available
         if (result.canRetry && result.retryFunction) {
           errorNotification.onRetry = () => {
             clearNotification();

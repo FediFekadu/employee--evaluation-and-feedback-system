@@ -21,11 +21,22 @@ class AdminSeeder extends Seeder
         User::where('role', 'superadmin')->update(['role' => 'college_admin']);
 
         // Seed College Admin (department-level)
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@college.local'],
             [
                 'name' => 'College Admin',
                 'password' => Hash::make('Admin@1234'),
+                'role' => 'college_admin',
+                'department_id' => $department?->id,
+            ]
+        );
+
+        // Seed requested College Admin account
+        User::updateOrCreate(
+            ['email' => 'collegeadmin@gmail.com'],
+            [
+                'name' => 'College Admin',
+                'password' => Hash::make('12345678'),
                 'role' => 'college_admin',
                 'department_id' => $department?->id,
             ]
