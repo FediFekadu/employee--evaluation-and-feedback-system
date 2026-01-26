@@ -426,6 +426,12 @@ function DepartmentEvaluations() {
   const [currentTemplate, setCurrentTemplate] = useState(null);
   const [templateQuestions, setTemplateQuestions] = useState([]);
   const [templateLoading, setTemplateLoading] = useState(false);
+  const [peerTemplate, setPeerTemplate] = useState(null);
+  const [peerTemplateQuestions, setPeerTemplateQuestions] = useState([]);
+  const [peerTemplateLoading, setPeerTemplateLoading] = useState(false);
+  const [hodTemplate, setHodTemplate] = useState(null);
+  const [hodTemplateQuestions, setHodTemplateQuestions] = useState([]);
+  const [hodTemplateLoading, setHodTemplateLoading] = useState(false);
 
   // Load department template
   const loadDepartmentTemplate = useCallback(async () => {
@@ -444,9 +450,41 @@ function DepartmentEvaluations() {
     }
   }, [deptId]);
 
+  // Load peer department template
+  const loadPeerDepartmentTemplate = useCallback(async () => {
+    if (!deptId) return;
+    setPeerTemplateLoading(true);
+    try {
+      const response = await api.get(`/departments/${deptId}/peer-template`);
+      setPeerTemplate(response.data.template);
+      setPeerTemplateQuestions(response.data.questions || []);
+    } catch (error) {
+      console.error('Failed to load peer department template:', error);
+    } finally {
+      setPeerTemplateLoading(false);
+    }
+  }, [deptId]);
+
+  // Load HOD department template
+  const loadHodDepartmentTemplate = useCallback(async () => {
+    if (!deptId) return;
+    setHodTemplateLoading(true);
+    try {
+      const response = await api.get(`/departments/${deptId}/hod-template`);
+      setHodTemplate(response.data.template);
+      setHodTemplateQuestions(response.data.questions || []);
+    } catch (error) {
+      console.error('Failed to load HOD department template:', error);
+    } finally {
+      setHodTemplateLoading(false);
+    }
+  }, [deptId]);
+
   // Refresh template data
   const refreshTemplate = useCallback(() => {
     loadDepartmentTemplate();
+    loadPeerDepartmentTemplate();
+    loadHodDepartmentTemplate();
   }, [loadDepartmentTemplate]);
 
   useEffect(() => { setAcademicYear(currentYear); }, [currentYear]);
@@ -467,6 +505,8 @@ function DepartmentEvaluations() {
   useEffect(() => {
     if (deptId) {
       loadDepartmentTemplate();
+      loadPeerDepartmentTemplate();
+      loadHodDepartmentTemplate();
     }
   }, [deptId, loadDepartmentTemplate]);
 
@@ -582,6 +622,96 @@ function DepartmentEvaluations() {
 
   const teacherOptions = department?.teachers || [];
   const courseOptions = department?.courses || [];
+
+  // Peer-to-peer tables state
+  const [peerFilter, setPeerFilter] = useState('');
+  const [peerSortKey, setPeerSortKey] = useState('opened_at');
+  const [peerSortDir, setPeerSortDir] = useState('desc');
+  const [peerPage, setPeerPage] = useState(1);
+  const [peerPageSize, setPeerPageSize] = useState(5);
+
+  const [prevPeerFilter, setPrevPeerFilter] = useState('');
+  const [prevPeerSortKey, setPrevPeerSortKey] = useState('closed_at');
+  const [prevPeerSortDir, setPrevPeerSortDir] = useState('desc');
+  const [prevPeerPage, setPrevPeerPage] = useState(1);
+  const [prevPeerPageSize, setPrevPeerPageSize] = useState(5);
+
+  // HOD (Admin) evaluation tables state
+  const [hodFilter, setHodFilter] = useState('');
+  const [hodSortKey, setHodSortKey] = useState('opened_at');
+  const [hodSortDir, setHodSortDir] = useState('desc');
+  const [hodPage, setHodPage] = useState(1);
+  const [hodPageSize, setHodPageSize] = useState(5);
+
+  const [prevHodFilter, setPrevHodFilter] = useState('');
+  const [prevHodSortKey, setPrevHodSortKey] = useState('closed_at');
+  const [prevHodSortDir, setPrevHodSortDir] = useState('desc');
+  const [prevHodPage, setPrevHodPage] = useState(1);
+  const [prevHodPageSize, setPrevHodPageSize] = useState(5);
+
+  const getTextMatch = (txt) => (txt || '').toString().toLowerCase();
+  const matchFilter = (ev, filterText) => {
+    const f = filterText.trim().toLowerCase();
+    if (!f) return true;
+    const courseTxt = getTextMatch(ev.course?.title) + ' ' + getTextMatch(ev.course?.code);
+    const teacherTxt = getTextMatch(ev.teacher?.name);
+    return courseTxt.includes(f) || teacherTxt.includes(f);
+  };
+
+  const getPeerScore = (evId) => {
+    const analytics = analyticsData[evId];
+    if (!analytics || analytics.peer_score === undefined || analytics.peer_score === null) return null;
+    return Number(analytics.peer_score);
+  };
+
+  const getHodScore = (evId) => {
+    const analytics = analyticsData[evId];
+    if (!analytics || analytics.admin_score === undefined || analytics.admin_score === null) return null;
+    return Number(analytics.admin_score);
+  };
+
+  const sortEvaluations = (items, sortKey, sortDir, mode = 'peer') => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const sorted = [...items].sort((a, b) => {
+      const aPeer = mode === 'hod' ? getHodScore(a.id) : getPeerScore(a.id);
+      const bPeer = mode === 'hod' ? getHodScore(b.id) : getPeerScore(b.id);
+      switch (sortKey) {
+        case 'course': {
+          const aVal = getTextMatch(a.course?.title);
+          const bVal = getTextMatch(b.course?.title);
+          return aVal.localeCompare(bVal) * dir;
+        }
+        case 'teacher': {
+          const aVal = getTextMatch(a.teacher?.name);
+          const bVal = getTextMatch(b.teacher?.name);
+          return aVal.localeCompare(bVal) * dir;
+        }
+        case 'opened_at': {
+          const aVal = a.opened_at || '';
+          const bVal = b.opened_at || '';
+          return (aVal > bVal ? 1 : aVal < bVal ? -1 : 0) * dir;
+        }
+        case 'closed_at': {
+          const aVal = a.closed_at || '';
+          const bVal = b.closed_at || '';
+          return (aVal > bVal ? 1 : aVal < bVal ? -1 : 0) * dir;
+        }
+        case 'peer_score': {
+          const aVal = aPeer ?? -Infinity;
+          const bVal = bPeer ?? -Infinity;
+          return (aVal - bVal) * dir;
+        }
+        case 'hod_score': {
+          const aVal = aPeer ?? -Infinity;
+          const bVal = bPeer ?? -Infinity;
+          return (aVal - bVal) * dir;
+        }
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  };
 
   const submitEvaluation = async () => {
     if (!evalForm.course_id || !evalForm.teacher_id || !academicYear || !semester || !evalForm.opened_at || !evalForm.year_level) {
@@ -739,6 +869,47 @@ function DepartmentEvaluations() {
           />
         )}
       </div>
+
+      {/* Peer Evaluation Template */}
+      <div className="dept-card" style={{ marginTop: 12 }}>
+        <h4>Peer Evaluation Template</h4>
+        <p style={{ color: 'var(--muted)' }}>Configure the questions peers use when evaluating instructors. Managed separately from student questions.</p>
+        {peerTemplateLoading ? (
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <p>Loading peer template...</p>
+          </div>
+        ) : (
+          <DepartmentTemplateManager 
+            departmentId={deptId}
+            template={peerTemplate}
+            questions={peerTemplateQuestions}
+            onTemplateSaved={refreshTemplate}
+            audience="peer"
+          />
+        )}
+      </div>
+
+      {/* HOD Evaluation Template */}
+      <div className="dept-card" style={{ marginTop: 12 }}>
+        <h4>HOD Evaluation Template</h4>
+        <p style={{ color: 'var(--muted)' }}>Configure the questions HODs use when evaluating instructors. Managed separately from student and peer questions.</p>
+        {hodTemplateLoading ? (
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <p>Loading HOD template...</p>
+          </div>
+        ) : (
+          <DepartmentTemplateManager
+            departmentId={deptId}
+            template={hodTemplate}
+            questions={hodTemplateQuestions}
+            onTemplateSaved={refreshTemplate}
+            audience="hod"
+          />
+        )}
+      </div>
+
+      {/* HOD evaluations tables removed per request */}
+      
 
       {false && (<div className="dept-card" style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

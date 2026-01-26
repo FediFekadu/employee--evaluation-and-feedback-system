@@ -12,9 +12,13 @@ class DepartmentTemplateController extends Controller
     /**
      * Get the active template for a department
      */
-    public function getTemplate($departmentId)
+    public function getTemplate(Request $request, $departmentId)
     {
-        $template = DepartmentEvaluationTemplate::getActiveTemplate($departmentId);
+        $audience = strtolower($request->query('audience', 'student'));
+        if (!in_array($audience, ['student', 'peer', 'admin'])) {
+            $audience = 'student';
+        }
+        $template = DepartmentEvaluationTemplate::getActiveTemplate($departmentId, $audience);
         
         if (!$template) {
             return response()->json([
@@ -45,10 +49,16 @@ class DepartmentTemplateController extends Controller
             'questions.*.section' => 'nullable|string|max:10',
         ]);
 
-        return DB::transaction(function () use ($data, $departmentId) {
+        $audience = strtolower($request->query('audience', 'student'));
+        if (!in_array($audience, ['student', 'peer', 'admin'])) {
+            $audience = 'student';
+        }
+
+        return DB::transaction(function () use ($data, $departmentId, $audience) {
             // Get or create the active template
             $template = DepartmentEvaluationTemplate::where('department_id', $departmentId)
                 ->where('is_active', true)
+                ->where('audience', $audience)
                 ->first();
 
             if (!$template) {
@@ -56,6 +66,7 @@ class DepartmentTemplateController extends Controller
                     'department_id' => $departmentId,
                     'name' => $data['name'] ?? 'Default Evaluation Template',
                     'description' => $data['description'] ?? null,
+                    'audience' => $audience,
                     'form_info' => $data['form_info'] ?? null,
                     'is_active' => true,
                 ]);
@@ -63,6 +74,7 @@ class DepartmentTemplateController extends Controller
                 $template->update([
                     'name' => $data['name'] ?? $template->name,
                     'description' => $data['description'] ?? $template->description,
+                    'audience' => $audience,
                     'form_info' => $data['form_info'] ?? $template->form_info,
                 ]);
             }
@@ -91,7 +103,7 @@ class DepartmentTemplateController extends Controller
     /**
      * Get questions for student evaluations (from template)
      */
-    public function getQuestionsForEvaluation($evaluationId)
+    public function getQuestionsForEvaluation(Request $request, $evaluationId)
     {
         // Get the evaluation and its department
         $evaluation = \App\Models\Evaluation::with('course.department')->find($evaluationId);
@@ -101,7 +113,11 @@ class DepartmentTemplateController extends Controller
         }
 
         $departmentId = $evaluation->course->department_id;
-        $template = DepartmentEvaluationTemplate::getActiveTemplate($departmentId);
+        $audience = strtolower($request->query('audience', 'student'));
+        if (!in_array($audience, ['student', 'peer', 'admin'])) {
+            $audience = 'student';
+        }
+        $template = DepartmentEvaluationTemplate::getActiveTemplate($departmentId, $audience);
 
         if (!$template) {
             return response()->json([
@@ -120,7 +136,8 @@ class DepartmentTemplateController extends Controller
         return response()->json([
             'questions' => $questions,
             'form_info' => $template->form_info,
-            'template_name' => $template->name
+            'template_name' => $template->name,
+            'audience' => $audience
         ]);
     }
 

@@ -9,10 +9,14 @@ class DepartmentEvaluationTemplate extends Model
 {
     use HasFactory;
 
+    // Use the new table name for clarity
+    protected $table = 'student_evaluation_templates';
+
     protected $fillable = [
         'department_id',
         'name',
         'description',
+        'audience',
         'is_active',
         'form_info',
     ];
@@ -35,10 +39,11 @@ class DepartmentEvaluationTemplate extends Model
     /**
      * Get the active template for a department
      */
-    public static function getActiveTemplate($departmentId)
+    public static function getActiveTemplate($departmentId, $audience = 'student')
     {
         return static::where('department_id', $departmentId)
             ->where('is_active', true)
+            ->where('audience', $audience)
             ->with('questions')
             ->first();
     }

@@ -101,6 +101,15 @@ Route::get('/departments/{department}/template', [App\Http\Controllers\Departmen
 Route::put('/departments/{department}/template', [App\Http\Controllers\DepartmentTemplateController::class, 'updateTemplate']);
 Route::get('/evaluations/{evaluation}/template-questions', [App\Http\Controllers\DepartmentTemplateController::class, 'getQuestionsForEvaluation']);
 
+// Peer Template routes
+Route::get('/departments/{department}/peer-template', [App\Http\Controllers\PeerTemplateController::class, 'getTemplate']);
+Route::put('/departments/{department}/peer-template', [App\Http\Controllers\PeerTemplateController::class, 'updateTemplate']);
+Route::get('/evaluations/{evaluation}/peer-template-questions', [App\Http\Controllers\PeerTemplateController::class, 'getQuestionsForEvaluation']);
+
+// HOD Template routes
+Route::get('/departments/{department}/hod-template', [App\Http\Controllers\HodTemplateController::class, 'getTemplate']);
+Route::put('/departments/{department}/hod-template', [App\Http\Controllers\HodTemplateController::class, 'updateTemplate']);
+
 // Department admins management
 Route::get('/department-admins', [DepartmentController::class, 'listAdmins']);
 Route::put('/department-admins/{user}', [DepartmentController::class, 'updateAdmin']);

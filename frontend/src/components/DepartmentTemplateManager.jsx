@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import api from '../services/api';
 
-function DepartmentTemplateManager({ departmentId, template, questions, onTemplateSaved }) {
+function DepartmentTemplateManager({ departmentId, template, questions, onTemplateSaved, audience = 'student' }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [previewMode, setPreviewMode] = useState(false);
@@ -9,7 +9,13 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
   // Form header information
   const [formInfo, setFormInfo] = useState({
     university: template?.form_info?.university || 'BULE-HORA UNIVERSITY',
-    formTitle: template?.form_info?.formTitle || "Teachers' Performance Evaluation Criteria To be filled by student",
+    formTitle: template?.form_info?.formTitle || (
+      audience === 'peer'
+        ? "Peer-to-Peer Teacher Evaluation Criteria"
+        : audience === 'hod'
+          ? "Head of Department Teacher Evaluation Criteria"
+          : "Teachers' Performance Evaluation Criteria To be filled by student"
+    ),
     year: template?.form_info?.year || new Date().getFullYear(),
     semester: template?.form_info?.semester || 'First'
   });
@@ -105,12 +111,23 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
         return;
       }
 
-      await api.put(`/departments/${departmentId}/template`, {
+      const endpoint = audience === 'peer'
+        ? `/departments/${departmentId}/peer-template`
+        : audience === 'hod'
+          ? `/departments/${departmentId}/hod-template`
+          : `/departments/${departmentId}/template`;
+
+      const common = {
         name: 'Comprehensive Teacher Evaluation Template',
         description: 'Department evaluation template with comprehensive questions covering instructional skills, professional ethics, and assessment methods.',
         form_info: formInfo,
-        questions: allQuestions
-      });
+      };
+
+      const payload = audience === 'hod'
+        ? { template: common, questions: allQuestions }
+        : { ...common, questions: allQuestions };
+
+      await api.put(endpoint, payload);
 
       setMessage(`✅ Template saved successfully! ${allQuestions.length} questions configured.`);
       onTemplateSaved?.();
@@ -154,12 +171,12 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
       {/* Header */}
       <div className="template-header">
         <div className="template-info">
-          <h2>Department Evaluation Template</h2>
-          <p>Configure the evaluation questions that will be used for all evaluations in this department.</p>
+          <h2>{audience === 'peer' ? 'Peer Evaluation Template' : audience === 'hod' ? 'HOD Evaluation Template' : 'Student Evaluation Template'}</h2>
+          <p>Configure the evaluation questions that will be used for all {audience === 'peer' ? 'peer evaluations' : audience === 'hod' ? 'HOD evaluations' : 'student evaluations'} in this department.</p>
           <div className="template-stats">
             <span className="stat">📝 {totalQuestions} Questions</span>
             <span className="stat">📊 {sections.length} Sections</span>
-            <span className="stat">🎯 All Evaluations</span>
+            <span className="stat">🎯 {audience === 'peer' ? 'Peer Evaluations' : audience === 'hod' ? 'HOD Evaluations' : 'Student Evaluations'}</span>
           </div>
         </div>
         
@@ -281,8 +298,8 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
       <div className="template-instructions">
         <h3>How This Works</h3>
         <ul>
-          <li>✅ <strong>All evaluations</strong> in this department will use these questions</li>
-          <li>✅ <strong>Students will see</strong> these questions when filling out any evaluation</li>
+          <li>✅ <strong>All {audience === 'peer' ? 'peer' : audience === 'hod' ? 'HOD' : 'student'} evaluations</strong> in this department will use these questions</li>
+          <li>✅ <strong>{audience === 'peer' ? 'Peers will see' : audience === 'hod' ? 'HODs will see' : 'Students will see'}</strong> these questions when filling out any evaluation</li>
           <li>✅ <strong>Future evaluations</strong> will automatically use this template</li>
           <li>✅ <strong>Consistent experience</strong> across all teacher evaluations</li>
           <li>⚙️ <strong>Easy management</strong> - update once, applies everywhere</li>

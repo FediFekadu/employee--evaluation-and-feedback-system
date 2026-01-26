@@ -9,6 +9,8 @@ class TemplateQuestion extends Model
 {
     use HasFactory;
 
+    protected $table = 'student_template_questions';
+
     protected $fillable = [
         'template_id',
         'text',

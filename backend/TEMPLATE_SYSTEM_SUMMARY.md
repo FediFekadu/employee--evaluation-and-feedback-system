@@ -12,7 +12,7 @@ Students were getting 422 errors when submitting evaluations because the system 
 
 ### 2. Database Structure
 - `department_evaluation_templates` table for storing department templates
-- `template_questions` table for storing template questions with sections
+- `student_template_questions` table for storing student template questions with sections
 - Added `section` column to `questions` table for backward compatibility
 - Added `order` column to `evaluation_questions` pivot table
 
