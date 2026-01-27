@@ -15,7 +15,10 @@ class DepartmentController extends Controller
 
     public function show(Department $department)
     {
-        return $department->load(['courses', 'teachers', 'students']);
+        // Eager-load nested relations so the frontend can see which instructors
+        // are assigned to each course without making additional requests.
+        // This powers the confirmation step that lists an instructor's courses.
+        return $department->load(['courses.teachers', 'teachers', 'students']);
     }
 
     public function store(Request $request)
@@ -515,7 +518,7 @@ class DepartmentController extends Controller
                 $totalResponses = 0;
                 $avgPerformanceScores = [];
                 $avgParticipationRates = [];
-                $weightedScores = [];
+                $teacherSemesterWeightedScores = [];
                 $breakdownAccumulator = [
                     'student' => ['raw' => 0, 'weighted' => 0, 'count' => 0, 'weight' => 50],
                     'peer'    => ['raw' => 0, 'weighted' => 0, 'count' => 0, 'weight' => 30],
@@ -531,7 +534,7 @@ class DepartmentController extends Controller
                     $avgPerformanceScores[] = $stats['performance_score'] ?? 0;
                     $avgParticipationRates[] = $stats['participation']['participation_rate'] ?? 0;
                     $totalResponses += $stats['total_responses'] ?? 0;
-                    $weightedScores[] = $stats['weighted_scores']['weighted_score'] ?? 0;
+                    // Note: final department score will be computed per teacher per semester below
 
                     // Accumulate rating distribution
                     if (!empty($stats['rating_distribution']) && is_array($stats['rating_distribution'])) {
@@ -576,7 +579,32 @@ class DepartmentController extends Controller
 
                 $avgPerformance = count($avgPerformanceScores) > 0 ? round(array_sum($avgPerformanceScores) / count($avgPerformanceScores), 2) : 0;
                 $avgParticipation = count($avgParticipationRates) > 0 ? round(array_sum($avgParticipationRates) / count($avgParticipationRates), 2) : 0;
-                $avgWeightedScore = count($weightedScores) > 0 ? round(array_sum($weightedScores) / count($weightedScores), 2) : 0;
+
+                // Compute per-teacher-per-semester weighted scores according to evaluation.md
+                $teacherSemesterGroups = [];
+                foreach ($evaluations as $eval) {
+                    $key = $eval->teacher_id . '|' . $eval->academic_year . '|' . $eval->semester;
+                    if (!isset($teacherSemesterGroups[$key])) {
+                        $teacherSemesterGroups[$key] = [
+                            'teacher_id' => $eval->teacher_id,
+                            'academic_year' => $eval->academic_year,
+                            'semester' => $eval->semester,
+                        ];
+                    }
+                }
+
+                $teacherSemesterResults = [];
+                foreach ($teacherSemesterGroups as $group) {
+                    $ts = $analyticsService->calculateTeacherSemesterScores(
+                        $group['teacher_id'],
+                        $group['academic_year'],
+                        $group['semester']
+                    );
+                    $teacherSemesterResults[] = $ts;
+                    $teacherSemesterWeightedScores[] = $ts['weighted_score'];
+                }
+
+                $avgWeightedScore = count($teacherSemesterWeightedScores) > 0 ? round(array_sum($teacherSemesterWeightedScores) / count($teacherSemesterWeightedScores), 2) : 0;
 
                 // Build aggregated breakdown
                 $aggregatedBreakdown = [];
@@ -589,7 +617,7 @@ class DepartmentController extends Controller
                     ];
                 }
 
-                // Compose final schema
+                // Compose final schema (aligned with per-teacher-per-semester model)
                 $data = [
                     'summary' => [
                         'department_id' => $evaluations->first()?->course?->department_id ?? null,
@@ -611,6 +639,7 @@ class DepartmentController extends Controller
                         'breakdown' => $aggregatedBreakdown,
                     ],
                     'rating_distribution' => $ratingDistribution,
+                    'teacher_semester_results' => $teacherSemesterResults,
                 ];
 
                 if (!$summaryOnly) {

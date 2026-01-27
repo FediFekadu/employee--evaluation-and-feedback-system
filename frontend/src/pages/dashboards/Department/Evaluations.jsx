@@ -389,8 +389,10 @@ function DepartmentEvaluations() {
   const [academicYear, setAcademicYear] = useState('');
   const [semester, setSemester] = useState('Semester I');
 
-  const [evalForm, setEvalForm] = useState({ course_id: '', teacher_id: '', year_level: '1', opened_at: '', closed_at: '' });
+  const [openForm, setOpenForm] = useState({ teacher_id: '', opened_at: '', closed_at: '' });
   const [evalSubmitting, setEvalSubmitting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [assignedCoursesForTeacher, setAssignedCoursesForTeacher] = useState([]);
   const [selectedEvalId, setSelectedEvalId] = useState(null);
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -713,29 +715,87 @@ function DepartmentEvaluations() {
     return sorted;
   };
 
-  const submitEvaluation = async () => {
-    if (!evalForm.course_id || !evalForm.teacher_id || !academicYear || !semester || !evalForm.opened_at || !evalForm.year_level) {
-      alert('Course, teacher, academic year, year level, semester, and opened date are required');
+  const computeAcademicYear = (dateStr) => {
+    if (!dateStr) return academicYear || currentYear;
+    const d = new Date(dateStr);
+    const y = d.getFullYear();
+    const m = d.getMonth(); // 0-based
+    return m >= 8 ? `${y}/${String((y + 1) % 100).padStart(2, '0')}` : `${y - 1}/${String(y % 100).padStart(2, '0')}`;
+  };
+
+  const mapSemester = (dateStr) => {
+    if (!dateStr) return semester || 'Semester I';
+    const m = new Date(dateStr).getMonth();
+    return (m >= 8 || m <= 0) ? 'Semester I' : 'Semester II';
+  };
+
+  // Prefer department->courses->teachers if present; otherwise, fetch teacher->courses from API.
+  const loadAssignedCoursesForTeacher = async (teacherId) => {
+    const tid = Number(teacherId);
+    const deptCourses = (department?.courses || []);
+    const hasTeacherRelation = deptCourses.some(c => Array.isArray(c.teachers));
+    if (hasTeacherRelation) {
+      return deptCourses.filter(c => (c.teachers || []).some(t => Number(t.id) === tid));
+    }
+    try {
+      const res = await api.get(`/teachers/${tid}`);
+      return res.data?.courses || [];
+    } catch (err) {
+      console.error('Failed to load teacher courses:', err);
+      return [];
+    }
+  };
+
+  const proceedToConfirm = async () => {
+    if (!openForm.teacher_id || !openForm.opened_at) {
+      alert('Instructor and open date are required');
       return;
     }
+    const ay = (academicYear || '').trim() || computeAcademicYear(openForm.opened_at);
+    const sem = (semester || '').trim() || mapSemester(openForm.opened_at);
+    setAcademicYear(ay);
+    setSemester(sem);
+    const courses = await loadAssignedCoursesForTeacher(openForm.teacher_id);
+    setAssignedCoursesForTeacher(courses);
+    setConfirming(true);
+  };
+
+  const finalizeOpen = async () => {
     setEvalSubmitting(true);
     try {
-      const payload = {
-        course_id: Number(evalForm.course_id),
-        teacher_id: Number(evalForm.teacher_id),
-        academic_year: academicYear,
-        semester,
-        year_level: Number(evalForm.year_level),
-        opened_at: evalForm.opened_at,
-        closed_at: evalForm.closed_at || null,
-      };
-      const res = await api.post('/evaluations', payload);
-      setEvaluations((prev) => [res.data, ...prev]);
-      setEvalForm({ course_id: '', teacher_id: '', year_level: '1', opened_at: '', closed_at: '' });
-      alert('Evaluation opened successfully');
+      const teacherId = Number(openForm.teacher_id);
+      const opened_at = openForm.opened_at;
+      const closed_at = openForm.closed_at || null;
+      const ay = academicYear || computeAcademicYear(opened_at);
+      const sem = semester || mapSemester(opened_at);
+      const created = [];
+      for (const course of assignedCoursesForTeacher) {
+        const pivot = (course.teachers || []).find(t => t.id === teacherId)?.pivot || {};
+        const year_level = Number(pivot?.year_level || course.year_level || 1);
+        const payload = {
+          course_id: Number(course.id),
+          teacher_id: teacherId,
+          academic_year: ay,
+          semester: sem,
+          year_level,
+          opened_at,
+          closed_at,
+        };
+        const res = await api.post('/evaluations', payload);
+        created.push(res.data);
+      }
+      if (created.length === 0) {
+        alert('No assigned courses found for this instructor.');
+      } else {
+        setEvaluations(prev => [...created, ...prev]);
+        alert(`Evaluations opened: ${created.length}`);
+      }
+      setOpenForm({ teacher_id: '', opened_at: '', closed_at: '' });
+      setAssignedCoursesForTeacher([]);
+      setConfirming(false);
     } catch (e) {
-      console.error('Failed to open evaluation:', e);
-      const errorMessage = e.response?.data?.message || e.message || 'Failed to open evaluation. Please try again.';
+      console.error('Failed to open evaluations:', e);
+      const errorMessage = e.response?.data?.message || e.message || 'Failed to open evaluations. Please try again.';
       alert(errorMessage);
     } finally {
       setEvalSubmitting(false);
@@ -804,21 +864,12 @@ function DepartmentEvaluations() {
   return (
     <div>
       <div className="dept-card">
-        <h3>Open Course Evaluation</h3>
-        <p style={{ color: 'var(--muted)' }}>Select course and instructor, set dates, and open evaluation for the chosen session.</p>
+        <h3>Open Evaluations</h3>
+        <p style={{ color: 'var(--muted)' }}>Select instructor, academic year, semester, and dates, then confirm Student/Peer/HOD enablement.</p>
         <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
           <label>
-            Course
-            <select className="dept-select" value={evalForm.course_id} onChange={(e) => setEvalForm((f) => ({ ...f, course_id: e.target.value }))}>
-              <option value="">Select course</option>
-              {courseOptions.map((c) => (
-                <option key={c.id} value={String(c.id)}>{c.title} ({c.code})</option>
-              ))}
-            </select>
-          </label>
-          <label>
             Instructor
-            <select className="dept-select" value={evalForm.teacher_id} onChange={(e) => setEvalForm((f) => ({ ...f, teacher_id: e.target.value }))}>
+            <select className="dept-select" value={openForm.teacher_id} onChange={(e) => setOpenForm((f) => ({ ...f, teacher_id: e.target.value }))}>
               <option value="">Select instructor</option>
               {teacherOptions.map((t) => (
                 <option key={t.id} value={String(t.id)}>{t.name}</option>
@@ -827,30 +878,93 @@ function DepartmentEvaluations() {
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
             <label style={{ flex: 1 }}>
-              Target Year
-              <select className="dept-select" value={evalForm.year_level} onChange={(e) => setEvalForm((f) => ({ ...f, year_level: e.target.value }))}>
-                {[1,2,3,4,5].map((y) => (
-                  <option key={y} value={String(y)}>Year {y}</option>
-                ))}
-              </select>
+              Academic year
+              <input className="dept-input" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder={currentYear} />
             </label>
             <label style={{ flex: 1 }}>
               Semester
-              <input className="dept-input" value={semester} onChange={(e) => setSemester(e.target.value)} />
+              <select className="dept-select" value={semester} onChange={(e) => setSemester(e.target.value)}>
+                <option value="Semester I">Semester I</option>
+                <option value="Semester II">Semester II</option>
+              </select>
             </label>
           </div>
           <label>
             Open date
-            <input type="date" className="dept-input" value={evalForm.opened_at} onChange={(e) => setEvalForm((f) => ({ ...f, opened_at: e.target.value }))} />
+            <input type="date" className="dept-input" value={openForm.opened_at} onChange={(e) => setOpenForm((f) => ({ ...f, opened_at: e.target.value }))} />
           </label>
           <label>
             Close date (optional)
-            <input type="date" className="dept-input" value={evalForm.closed_at} onChange={(e) => setEvalForm((f) => ({ ...f, closed_at: e.target.value }))} />
+            <input type="date" className="dept-input" value={openForm.closed_at} onChange={(e) => setOpenForm((f) => ({ ...f, closed_at: e.target.value }))} />
           </label>
-          <button className="dept-btn dept-btn-primary" onClick={submitEvaluation} disabled={evalSubmitting}>
-            {evalSubmitting ? 'Opening…' : 'Open Evaluation'}
+          <button className="dept-btn dept-btn-primary" onClick={proceedToConfirm} disabled={evalSubmitting}>
+            {evalSubmitting ? 'Preparing…' : 'Next → Confirm'}
           </button>
         </div>
+
+        {confirming && (
+          <div style={{ marginTop: 16 }}>
+            <h4>Confirmation</h4>
+            <div style={{ marginBottom: 8, color: 'var(--muted)' }}>
+              Session: {academicYear || currentYear}, {semester} • Open: {openForm.opened_at || '—'} • Close: {openForm.closed_at || '—'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {/* Box 1: Student Evaluation */}
+              <div style={{ padding: 12, border: '1px solid #dee2e6', borderRadius: 8, background: '#fff' }}>
+                <h5 style={{ margin: 0 }}>Student Evaluation</h5>
+                <p style={{ color: 'var(--muted)' }}>Student evaluation will be ENABLED</p>
+                <ul style={{ marginTop: 8 }}>
+                  {assignedCoursesForTeacher.length === 0 ? (
+                    <li style={{ color: 'var(--muted)' }}>No assigned courses found for this instructor.</li>
+                  ) : (
+                    assignedCoursesForTeacher.map((c) => {
+                      const teacherId = Number(openForm.teacher_id);
+                      const pivot = (c.teachers || []).find(t => t.id === teacherId)?.pivot || {};
+                      const year = pivot?.year_level ?? c.year_level ?? '—';
+                      return (
+                        <li key={c.id}>{c.title} — Year {year}</li>
+                      );
+                    })
+                  )}
+                </ul>
+                <small style={{ color: 'var(--muted)' }}>
+                  Display assigned courses here, e.g. HCI for 2nd year, Networking for 4th year
+                </small>
+              </div>
+
+              {/* Box 2: Peer Evaluation */}
+              <div style={{ padding: 12, border: '1px solid #dee2e6', borderRadius: 8, background: '#fff' }}>
+                <h5 style={{ margin: 0 }}>Peer Evaluation</h5>
+                <p style={{ color: 'var(--muted)' }}>Peer evaluation will be ENABLED</p>
+                <ul style={{ marginTop: 8 }}>
+                  <li>Peer teachers can evaluate other teachers</li>
+                  <li>Once per semester</li>
+                  <li>No course logic here — correct</li>
+                </ul>
+              </div>
+
+              {/* Box 3: HOD Evaluation */}
+              <div style={{ padding: 12, border: '1px solid #dee2e6', borderRadius: 8, background: '#fff' }}>
+                <h5 style={{ margin: 0 }}>HOD Evaluation</h5>
+                <p style={{ color: 'var(--muted)' }}>HOD evaluation will be ENABLED</p>
+                <ul style={{ marginTop: 8 }}>
+                  <li>Only users with HOD role can access</li>
+                  <li>Done once per semester</li>
+                  <li>Simple and clean — correct</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, textAlign: 'right' }}>
+              <button className="dept-btn dept-btn-primary" onClick={finalizeOpen} disabled={evalSubmitting}>
+                {evalSubmitting ? 'Opening…' : 'Confirmation → Open'}
+              </button>
+              <button className="dept-btn dept-btn-ghost" style={{ marginLeft: 8 }} onClick={() => setConfirming(false)} disabled={evalSubmitting}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="dept-card" style={{ marginTop: 12 }}>

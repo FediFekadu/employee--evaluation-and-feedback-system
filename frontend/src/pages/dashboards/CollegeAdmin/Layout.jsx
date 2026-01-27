@@ -1,8 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 function CollegeAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    // Load collapsed state from localStorage
+    try {
+      const saved = localStorage.getItem('adminSidebarCollapsed');
+      if (saved !== null) setSidebarCollapsed(saved === 'true');
+    } catch {}
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + B to toggle sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setSidebarCollapsed(prev => {
+          const next = !prev;
+          try { localStorage.setItem('adminSidebarCollapsed', next ? 'true' : 'false'); } catch {}
+          return next;
+        });
+      }
+      // Escape to close mobile sidebar
+      if (e.key === 'Escape' && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
 
   const navigationItems = [
     { to: '/admin', label: 'Overview', icon: '📊' },
@@ -23,7 +54,7 @@ function CollegeAdminLayout() {
       {/* Mobile Header */}
       <div className="mobile-header">
         <button 
-          className="mobile-menu-toggle"
+          className={`mobile-menu-toggle ${sidebarOpen ? 'active' : ''}`}
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-label="Toggle menu"
         >
@@ -35,7 +66,7 @@ function CollegeAdminLayout() {
       </div>
 
       {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">🎓</div>
@@ -44,6 +75,20 @@ function CollegeAdminLayout() {
               <p>Management Portal</p>
             </div>
           </div>
+          <button 
+            className="sidebar-minimize"
+            onClick={() => {
+              setSidebarCollapsed(v => {
+                const next = !v;
+                try { localStorage.setItem('adminSidebarCollapsed', next ? 'true' : 'false'); } catch {}
+                return next;
+              });
+            }}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand (Ctrl+B)' : 'Minimize (Ctrl+B)'}
+          >
+            {sidebarCollapsed ? '▸' : '◂'}
+          </button>
           <button 
             className="sidebar-close"
             onClick={() => setSidebarOpen(false)}

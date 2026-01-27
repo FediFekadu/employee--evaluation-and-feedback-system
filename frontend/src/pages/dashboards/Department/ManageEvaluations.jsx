@@ -12,6 +12,8 @@ function DepartmentManageEvaluations() {
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [creating, setCreating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [assignedCoursesForTeacher, setAssignedCoursesForTeacher] = useState([]);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [evalFilter, setEvalFilter] = useState('');
   const [advancedFilters, setAdvancedFilters] = useState({ status: 'all' });
@@ -20,13 +22,8 @@ function DepartmentManageEvaluations() {
   const [evalPage, setEvalPage] = useState(1);
   const [evalPageSize, setEvalPageSize] = useState(5);
   const [form, setForm] = useState({
-    course_id: '',
     teacher_id: '',
-    academic_year: '',
-    semester: '',
-    year_level: '',
     opened_at: '',
-    closed_at: '',
   });
 
   const loadEvaluations = async () => {
@@ -63,88 +60,100 @@ function DepartmentManageEvaluations() {
     loadMeta();
   }, [id]);
 
-  const resetForm = () => setForm({ course_id: '', teacher_id: '', academic_year: '', semester: '', year_level: '', opened_at: '', closed_at: '' });
+  const resetForm = () => {
+    setForm({ teacher_id: '', opened_at: '' });
+    setConfirming(false);
+    setAssignedCoursesForTeacher([]);
+  };
 
   const startCreate = () => { resetForm(); setCreating(true); setMessage(''); setError(''); };
   const cancelCreate = () => { setCreating(false); };
 
-  const submitCreate = async () => {
+  // Compute academic year string from open date
+  const computeAcademicYear = (openedAt) => {
+    const d = new Date(openedAt);
+    if (isNaN(d)) return '';
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    if (m >= 8) {
+      const nextShort = String(y + 1).slice(-2);
+      return `${y}/${nextShort}`;
+    }
+    const prev = y - 1;
+    const currShort = String(y).slice(-2);
+    return `${prev}/${currShort}`;
+  };
+
+  // Map semester label to numeric expected by backend
+  const mapSemester = (label, openedAt) => {
+    const t = String(label || '').toLowerCase();
+    if (t.includes('ii')) return '2';
+    if (t.includes('i')) return '1';
+    const d = new Date(openedAt);
+    if (!isNaN(d)) {
+      const m = d.getMonth() + 1;
+      return m >= 8 ? '1' : '2';
+    }
+    return '';
+  };
+
+  // Step: proceed to confirmation with boxes
+  const proceedToConfirm = () => {
     setError('');
     setMessage('');
+    const teacherId = String(form.teacher_id || '').trim();
+    const openedAt = String(form.opened_at || '').trim();
+    if (!teacherId) { setError('Please select instructor'); return; }
+    if (!openedAt) { setError('Please set open date'); return; }
+    const selectedTeacher = teachers.find(t => String(t.id) === teacherId);
+    if (!selectedTeacher) { setError('Selected instructor is not available in this department'); return; }
+    const deptId = selectedTeacher.department_id ?? selectedTeacher?.department?.id;
+    if (Number(deptId) !== Number(id)) { setError('Instructor must belong to this department'); return; }
+    const assigned = (courses || []).filter(c => {
+      const sameDept = (c.department?.id ?? c.department_id) === Number(id);
+      const isAssigned = (c.teachers || []).some(t => String(t.id) === teacherId);
+      return sameDept && isAssigned;
+    });
+    setAssignedCoursesForTeacher(assigned);
+    setConfirming(true);
+  };
+
+  // Finalize: create evaluations per assigned course
+  const finalizeOpen = async () => {
+    setError('');
+    setMessage('');
+    const teacherId = String(form.teacher_id);
+    const openedAt = String(form.opened_at);
+    if (!teacherId || !openedAt) { setError('Instructor and open date are required'); return; }
+    if (assignedCoursesForTeacher.length === 0) { setError('No assigned courses found for this instructor. Assign courses first from the Courses page.'); return; }
+    const academicYear = computeAcademicYear(openedAt);
+    if (!academicYear) { setError('Invalid open date — cannot derive academic year'); return; }
     try {
-      const payload = { ...form };
-      // Basic normalization
-      payload.academic_year = String(payload.academic_year).trim();
-      payload.semester = String(payload.semester).trim();
-      payload.year_level = String(payload.year_level).trim();
-      payload.opened_at = String(payload.opened_at).trim();
-      payload.closed_at = payload.closed_at ? String(payload.closed_at).trim() : '';
-
-      // Required fields
-      if (!payload.course_id || !payload.teacher_id || !payload.academic_year || !payload.semester || !payload.year_level || !payload.opened_at) {
-        setError('Please fill in all required fields');
-        return;
-      }
-
-      // Academic year format: 2025/26 or 2025-2026
-      const yearOk = /^(\d{4})([\/-])(\d{2}|\d{4})$/.test(payload.academic_year);
-      if (!yearOk) {
-        setError('Academic year should be like 2025/26 or 2025-2026');
-        return;
-      }
-
-      // Semester must be 1 or 2
-      if (!(payload.semester === '1' || payload.semester === '2')) {
-        setError('Semester must be 1 or 2');
-        return;
-      }
-
-      // Year level 1-6
-      const yl = Number(payload.year_level);
-      if (!Number.isInteger(yl) || yl < 1 || yl > 6) {
-        setError('Year level must be an integer between 1 and 6');
-        return;
-      }
-      payload.year_level = String(yl);
-
-      // Date check: opened_at <= closed_at (if provided)
-      if (payload.closed_at) {
-        const opened = new Date(payload.opened_at);
-        const closed = new Date(payload.closed_at);
-        if (!isNaN(opened) && !isNaN(closed) && opened > closed) {
-          setError('Closed date must be the same or after opened date');
-          return;
+      for (const course of assignedCoursesForTeacher) {
+        const pivot = (course.teachers || []).find(t => String(t.id) === teacherId)?.pivot || {};
+        const semester = mapSemester(pivot.semester, openedAt);
+        const yearLevel = Number(pivot.year_level || 0);
+        if (!semester || !yearLevel || yearLevel < 1 || yearLevel > 6) {
+          continue;
         }
+        const payload = {
+          course_id: String(course.id),
+          teacher_id: String(teacherId),
+          academic_year: academicYear,
+          semester: String(semester),
+          year_level: String(yearLevel),
+          opened_at: openedAt,
+          closed_at: '',
+        };
+        try { await api.post('/evaluations', payload); } catch {}
       }
-
-      // Validate instructor assignment to selected course (client-side)
-      const selectedCourse = courses.find(c => String(c.id) === String(payload.course_id));
-      if (!selectedCourse) {
-        setError('Selected course is not available in this department');
-        return;
-      }
-      const selectedTeacher = teachers.find(t => String(t.id) === String(payload.teacher_id));
-      if (!selectedTeacher) {
-        setError('Selected instructor is not available in this department');
-        return;
-      }
-      const sameDept = (selectedTeacher.department_id ?? selectedTeacher?.department?.id) === (selectedCourse.department?.id ?? selectedCourse.department_id);
-      if (!sameDept) {
-        setError('Instructor must belong to the same department as the course');
-        return;
-      }
-      const isAssigned = (selectedCourse.teachers || []).some(t => String(t.id) === String(selectedTeacher.id));
-      if (!isAssigned) {
-        setError('Instructor is not assigned to the selected course. Assign the instructor from the Courses page first.');
-        return;
-      }
-
-      const res = await api.post('/evaluations', payload);
-      setMessage('Evaluation created');
+      setMessage('Evaluation(s) opened for assigned courses');
       setCreating(false);
+      setConfirming(false);
+      setAssignedCoursesForTeacher([]);
       await loadEvaluations();
     } catch (e) {
-      setError(e?.response?.data?.message || 'Failed to create evaluation');
+      setError(e?.response?.data?.message || 'Failed to open evaluations');
     }
   };
 
@@ -350,117 +359,113 @@ function DepartmentManageEvaluations() {
       {creating && (
         <div className="modal">
           <div className="modal-content">
-            <div className="form-section" role="dialog" aria-labelledby="create-evaluation-title">
+            <div className="form-section" role="dialog" aria-labelledby="open-evaluation-title">
               <div className="form-header">
-                <h2 id="create-evaluation-title">Create Evaluation</h2>
-                <p>Fill out the details to open a new course evaluation.</p>
+                <h2 id="open-evaluation-title">Open Evaluation</h2>
+                <p>Select instructor and start date, then confirm.</p>
               </div>
 
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="course-select">Course</label>
-                  <select
-                    id="course-select"
-                    className="form-select"
-                    value={form.course_id}
-                    onChange={e => setForm(f => ({ ...f, course_id: e.target.value }))}
-                    aria-required="true"
-                  >
-                    <option value="">Select course</option>
-                    {courses.map(c => (
-                      <option key={c.id} value={c.id}>{c.title || c.name} ({c.code})</option>
-                    ))}
-                  </select>
-                </div>
+              {!confirming && (
+                <div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="teacher-select">Instructor</label>
+                      <select
+                        id="teacher-select"
+                        className="form-select"
+                        value={form.teacher_id}
+                        onChange={e => setForm(f => ({ ...f, teacher_id: e.target.value }))}
+                        aria-required="true"
+                      >
+                        <option value="">Select instructor</option>
+                        {teachers.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="teacher-select">Teacher</label>
-                  <select
-                    id="teacher-select"
-                    className="form-select"
-                    value={form.teacher_id}
-                    onChange={e => setForm(f => ({ ...f, teacher_id: e.target.value }))}
-                    aria-required="true"
-                  >
-                    <option value="">Select teacher</option>
-                    {teachers.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="opened-at">Open date</label>
+                      <input
+                        id="opened-at"
+                        className="form-input"
+                        type="date"
+                        value={form.opened_at}
+                        onChange={e => setForm(f => ({ ...f, opened_at: e.target.value }))}
+                        aria-required="true"
+                      />
+                    </div>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="academic-year">Academic Year</label>
-                  <input
-                    id="academic-year"
-                    className="form-input"
-                    type="text"
-                    placeholder="2025/26"
-                    value={form.academic_year}
-                    onChange={e => setForm(f => ({ ...f, academic_year: e.target.value }))}
-                    aria-required="true"
-                  />
+                  <div className="form-actions">
+                    <button className="btn btn-primary" onClick={proceedToConfirm}>Open Evaluation</button>
+                    <button className="btn btn-ghost" onClick={cancelCreate}>Cancel</button>
+                  </div>
                 </div>
+              )}
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="semester-select">Semester</label>
-                  <select
-                    id="semester-select"
-                    className="form-select"
-                    value={form.semester}
-                    onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}
-                    aria-required="true"
-                  >
-                    <option value="">Select semester</option>
-                    <option value="1">Semester I</option>
-                    <option value="2">Semester II</option>
-                  </select>
+              {confirming && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 8 }}>
+                    <div className="dept-card" style={{ border: '1px solid #e3e6ea' }}>
+                      <h3>Student Evaluation</h3>
+                      <p style={{ color: 'var(--muted)' }}>Student evaluation will be ENABLED.</p>
+                      <ul style={{ marginTop: 8 }}>
+                        <li>Students will only see teachers</li>
+                        <li>Students will only see courses assigned to them</li>
+                      </ul>
+                      <div style={{ marginTop: 8 }}>
+                        <strong>Your notes:</strong>
+                        <p style={{ color: 'var(--muted)' }}>Display assigned courses here:</p>
+                        {assignedCoursesForTeacher.length === 0 ? (
+                          <p style={{ color: 'var(--muted)' }}>No assigned courses found.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {assignedCoursesForTeacher.map(c => {
+                              const t = (c.teachers || []).find(t => String(t.id) === String(form.teacher_id));
+                              const yl = t?.pivot?.year_level ? `Year ${t.pivot.year_level}` : '';
+                              const sem = t?.pivot?.semester || '';
+                              return (
+                                <div key={c.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                  <span className="value-chip">{c.title || c.name}</span>
+                                  {(yl || sem) && (
+                                    <span style={{ color: 'var(--muted)' }}>{[yl, sem].filter(Boolean).join(' • ')}</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="dept-card" style={{ border: '1px solid #e3e6ea' }}>
+                      <h3>Peer Evaluation</h3>
+                      <p style={{ color: 'var(--muted)' }}>Peer evaluation will be ENABLED.</p>
+                      <ul style={{ marginTop: 8 }}>
+                        <li>Peer teachers can evaluate other teachers</li>
+                        <li>Done once per semester</li>
+                        <li>No course logic here — correct</li>
+                      </ul>
+                    </div>
+
+                    <div className="dept-card" style={{ border: '1px solid #e3e6ea' }}>
+                      <h3>HOD Evaluation</h3>
+                      <p style={{ color: 'var(--muted)' }}>HOD evaluation will be ENABLED.</p>
+                      <ul style={{ marginTop: 8 }}>
+                        <li>Only users with HOD role can access it</li>
+                        <li>Done once per semester</li>
+                        <li>Simple and clean — correct</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="form-actions" style={{ marginTop: 12 }}>
+                    <button className="btn btn-primary" onClick={finalizeOpen} disabled={assignedCoursesForTeacher.length === 0}>Confirmation → Open</button>
+                    <button className="btn btn-ghost" onClick={() => setConfirming(false)}>Back</button>
+                  </div>
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="year-level">Year Level</label>
-                  <input
-                    id="year-level"
-                    className="form-input"
-                    type="number"
-                    min="1"
-                    max="6"
-                    placeholder="1-6"
-                    value={form.year_level}
-                    onChange={e => setForm(f => ({ ...f, year_level: e.target.value }))}
-                    aria-required="true"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="opened-at">Opened At</label>
-                  <input
-                    id="opened-at"
-                    className="form-input"
-                    type="date"
-                    value={form.opened_at}
-                    onChange={e => setForm(f => ({ ...f, opened_at: e.target.value }))}
-                    aria-required="true"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="closed-at">Closed At (optional)</label>
-                  <input
-                    id="closed-at"
-                    className="form-input"
-                    type="date"
-                    value={form.closed_at}
-                    onChange={e => setForm(f => ({ ...f, closed_at: e.target.value }))}
-                    aria-required="false"
-                  />
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button className="btn btn-primary" onClick={submitCreate}>Create</button>
-                <button className="btn btn-ghost" onClick={cancelCreate}>Cancel</button>
-              </div>
+              )}
             </div>
           </div>
         </div>

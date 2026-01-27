@@ -6,6 +6,7 @@ function DepartmentLayout() {
   const { id } = useParams();
   const [department, setDepartment] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const loadDepartment = async () => {
@@ -17,15 +18,42 @@ function DepartmentLayout() {
       }
     };
     if (id) loadDepartment();
+    // Load collapsed state from localStorage
+    try {
+      const saved = localStorage.getItem('departmentSidebarCollapsed');
+      if (saved !== null) setSidebarCollapsed(saved === 'true');
+    } catch {}
   }, [id]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + B to toggle sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setSidebarCollapsed(prev => {
+          const next = !prev;
+          try { localStorage.setItem('departmentSidebarCollapsed', next ? 'true' : 'false'); } catch {}
+          return next;
+        });
+      }
+      // Escape to close mobile sidebar
+      if (e.key === 'Escape' && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
 
   const navItems = [
     { path: '', label: 'Overview', icon: '📊' },
     { path: '/courses', label: 'Courses', icon: '📚' },
     { path: '/instructors', label: 'Instructors', icon: '👨‍🏫' },
     { path: '/students', label: 'Students', icon: '👨‍🎓' },
-    { path: '/evaluations', label: 'Evaluations', icon: '📝' },
-    { path: '/manage-evaluations', label: 'Manage Evaluations', icon: '🛠️' },
+    { path: '/evaluations', label: 'Open Evaluation', icon: '📝' },
+    { path: '/peer-evaluations', label: 'Peer Evaluations', icon: '🤝' },
     { path: '/results', label: 'Results', icon: '📊' },
     { path: '/reports', label: 'Reports', icon: '📈' }
   ];
@@ -35,7 +63,7 @@ function DepartmentLayout() {
       {/* Mobile Header */}
       <div className="mobile-header">
         <button 
-          className="mobile-menu-toggle"
+          className={`mobile-menu-toggle ${sidebarOpen ? 'active' : ''}`}
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-label="Toggle navigation menu"
           aria-expanded={sidebarOpen}
@@ -50,7 +78,7 @@ function DepartmentLayout() {
       </div>
 
       {/* Sidebar */}
-      <aside className={`department-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <aside className={`department-sidebar ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">🏛️</div>
@@ -59,6 +87,20 @@ function DepartmentLayout() {
               <p>Management Dashboard</p>
             </div>
           </div>
+          <button 
+            className="sidebar-minimize"
+            onClick={() => {
+              setSidebarCollapsed(v => {
+                const next = !v;
+                try { localStorage.setItem('departmentSidebarCollapsed', next ? 'true' : 'false'); } catch {}
+                return next;
+              });
+            }}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand (Ctrl+B)' : 'Minimize (Ctrl+B)'}
+          >
+            {sidebarCollapsed ? '▸' : '◂'}
+          </button>
           <button 
             className="sidebar-close"
             onClick={() => setSidebarOpen(false)}

@@ -63,7 +63,12 @@ function Results() {
   // Simple refresh and reconnect functions
   const refreshData = useCallback(async () => {
     try {
-      const response = await api.get(`/departments/${id}/evaluation-results`);
+      const params = {};
+      const f = filters || {};
+      if (f.academic_year) params.academic_year = f.academic_year;
+      if (f.semester) params.semester = f.semester;
+      if (f.instructor) params.instructor = f.instructor;
+      const response = await api.get(`/departments/${id}/evaluation-results`, { params });
       setEvaluations(response.data?.data || []);
       setLastUpdate(new Date());
     } catch (error) {
@@ -108,7 +113,9 @@ function Results() {
       status: searchParams.get('status') || '',
       performance: searchParams.get('performance') || '',
       participation: searchParams.get('participation') || '',
-      yearLevel: searchParams.get('yearLevel') || ''
+      yearLevel: searchParams.get('yearLevel') || '',
+      academic_year: searchParams.get('academic_year') || '',
+      semester: searchParams.get('semester') || ''
     }
   });
 
@@ -145,6 +152,11 @@ function Results() {
     loadDepartmentData();
   }, [id]);
 
+  // Re-fetch evaluations when key filters change to honor server-side filtering
+  useEffect(() => {
+    refreshData();
+  }, [filters.academic_year, filters.semester, filters.instructor, refreshData]);
+
   // Load department and evaluation data with enhanced error handling
   const loadDepartmentData = async () => {
     try {
@@ -162,7 +174,11 @@ function Results() {
 
       // Also load evaluation results immediately so the page does not show an empty state
       const evalRes = await handleApiCall(
-        () => api.get(`/departments/${id}/evaluation-results`),
+        () => api.get(`/departments/${id}/evaluation-results`, { params: {
+          academic_year: filters.academic_year || undefined,
+          semester: filters.semester || undefined,
+          instructor: filters.instructor || undefined
+        } }),
         'evaluation_results_initial_load'
       );
 
@@ -254,6 +270,16 @@ function Results() {
       
       // Year level filter
       if (filters.yearLevel && evaluation.course?.year_level !== filters.yearLevel) {
+        return false;
+      }
+
+      // Academic year filter
+      if (filters.academic_year && String(evaluation.academic_year) !== String(filters.academic_year)) {
+        return false;
+      }
+
+      // Semester filter
+      if (filters.semester && String(evaluation.semester) !== String(filters.semester)) {
         return false;
       }
       
@@ -376,7 +402,9 @@ function Results() {
       status: '',
       performance: '',
       participation: '',
-      yearLevel: ''
+      yearLevel: '',
+      academic_year: '',
+      semester: ''
     });
     setCurrentPage(1);
   }, []);
@@ -406,6 +434,12 @@ function Results() {
           break;
         case 'participation':
           value = evaluation.participation?.data_quality;
+          break;
+        case 'academic_year':
+          value = evaluation.academic_year;
+          break;
+        case 'semester':
+          value = evaluation.semester;
           break;
       }
       if (value) values.add(value);
@@ -861,6 +895,44 @@ function Results() {
                             Filter evaluations by instructor name
                           </span>
                         </div>
+
+                        <div className="filter-group">
+                          <label htmlFor="academic-year-filter">Academic Year</label>
+                          <select
+                            id="academic-year-filter"
+                            value={filters.academic_year}
+                            onChange={(e) => handleFilterChange('academic_year', e.target.value)}
+                            className="filter-select"
+                            aria-describedby="academic-year-filter-help"
+                          >
+                            <option value="">All Years</option>
+                            {getUniqueValues('academic_year').map(year => (
+                              <option key={year} value={year}>{year}</option>
+                            ))}
+                          </select>
+                          <span id="academic-year-filter-help" className="sr-only">
+                            Filter evaluations by academic year
+                          </span>
+                        </div>
+
+                        <div className="filter-group">
+                          <label htmlFor="semester-filter">Semester</label>
+                          <select
+                            id="semester-filter"
+                            value={filters.semester}
+                            onChange={(e) => handleFilterChange('semester', e.target.value)}
+                            className="filter-select"
+                            aria-describedby="semester-filter-help"
+                          >
+                            <option value="">All Semesters</option>
+                            {getUniqueValues('semester').map(sem => (
+                              <option key={sem} value={sem}>{sem}</option>
+                            ))}
+                          </select>
+                          <span id="semester-filter-help" className="sr-only">
+                            Filter evaluations by semester
+                          </span>
+                        </div>
                         
                         <div className="filter-group">
                           <label>Status</label>
@@ -920,6 +992,34 @@ function Results() {
                       </div>
                       
                       <div className="filter-actions">
+                        {hasActiveFilters && (
+                          <div className="active-filters" aria-label="Active filters">
+                            {Object.entries(filters)
+                              .filter(([_, value]) => value)
+                              .map(([key, value]) => {
+                                const labels = {
+                                  course: 'Course',
+                                  instructor: 'Instructor',
+                                  status: 'Status',
+                                  yearLevel: 'Year Level',
+                                  performance: 'Performance',
+                                  participation: 'Data Quality',
+                                  academic_year: 'Academic Year',
+                                  semester: 'Semester'
+                                };
+                                return (
+                                  <button
+                                    key={`${key}-${value}`}
+                                    className="dept-btn dept-btn-ghost"
+                                    title={`Remove ${labels[key]} filter`}
+                                    onClick={() => handleFilterChange(key, '')}
+                                  >
+                                    {labels[key]}: {value} ✕
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        )}
                         <button 
                           className="dept-btn dept-btn-ghost"
                           onClick={clearFilters}

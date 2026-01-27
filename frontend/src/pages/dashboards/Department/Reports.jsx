@@ -50,6 +50,9 @@ function Reports() {
   const [departmentAggregation, setDepartmentAggregation] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedPeriods, setSelectedPeriods] = useState(['2023-1', '2023-2', '2024-1']);
+  // Teacher Semester Results filters and sort
+  const [tsrFilter, setTsrFilter] = useState({ academic_year: '', semester: '' });
+  const [tsrSort, setTsrSort] = useState({ by: 'weighted_score', dir: 'desc' });
 
   // Enhanced error handling hooks
   const { 
@@ -193,6 +196,7 @@ function Reports() {
             }
           },
           teacher_performances: [],
+          teacher_semester_results: [],
           rating_distribution: { '5': 45, '4': 32, '3': 15, '2': 6, '1': 2 },
           rating_trends: []
         });
@@ -916,6 +920,149 @@ function Reports() {
               </div>
             </div>
           )}
+
+          {/* Teacher Semester Results (per teacher per semester) */}
+          {Array.isArray(reportData?.teacher_semester_results) && reportData.teacher_semester_results.length > 0 && (() => {
+            const rows = reportData.teacher_semester_results;
+            const years = Array.from(new Set(rows.map(r => r.academic_year))).sort();
+            const semesters = Array.from(new Set(rows.map(r => r.semester))).sort();
+            const filtered = rows.filter(r => {
+              const yearOk = tsrFilter.academic_year ? r.academic_year === tsrFilter.academic_year : true;
+              const semOk = tsrFilter.semester ? String(r.semester) === String(tsrFilter.semester) : true;
+              return yearOk && semOk;
+            });
+            const sorted = [...filtered].sort((a, b) => {
+              const by = tsrSort.by;
+              const dir = tsrSort.dir === 'desc' ? -1 : 1;
+              const av = Number(a[by]) || 0;
+              const bv = Number(b[by]) || 0;
+              if (av === bv) return 0;
+              return av > bv ? dir : -dir;
+            });
+            return (
+              <div className="report-section">
+                <h3>Teacher Semester Results</h3>
+                <div className="controls-row" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
+                  <label>
+                    Year:
+                    <select value={tsrFilter.academic_year} onChange={e => setTsrFilter(f => ({ ...f, academic_year: e.target.value }))}>
+                      <option value="">All</option>
+                      {years.map(y => (<option key={y} value={y}>{y}</option>))}
+                    </select>
+                  </label>
+                  <label>
+                    Semester:
+                    <select value={tsrFilter.semester} onChange={e => setTsrFilter(f => ({ ...f, semester: e.target.value }))}>
+                      <option value="">All</option>
+                      {semesters.map(s => (<option key={s} value={s}>{s}</option>))}
+                    </select>
+                  </label>
+                  <label>
+                    Sort by:
+                    <select value={`${tsrSort.by}:${tsrSort.dir}`} onChange={e => {
+                      const [by, dir] = e.target.value.split(':');
+                      setTsrSort({ by, dir });
+                    }}>
+                      <option value="weighted_score:desc">Weighted Score ↓</option>
+                      <option value="weighted_score:asc">Weighted Score ↑</option>
+                      <option value="student_score:desc">Student Score ↓</option>
+                      <option value="student_score:asc">Student Score ↑</option>
+                      <option value="peer_score:desc">Peer Score ↓</option>
+                      <option value="peer_score:asc">Peer Score ↑</option>
+                      <option value="admin_score:desc">HOD Score ↓</option>
+                      <option value="admin_score:asc">HOD Score ↑</option>
+                    </select>
+                  </label>
+                  <div style={{ marginLeft: 'auto', opacity: 0.8 }}>Showing {sorted.length} of {rows.length}</div>
+                </div>
+                <div className="teacher-semester-results-table">
+                  <div className="table-header">
+                    <div>Teacher</div>
+                    <div>Teacher ID</div>
+                    <div>Academic Year</div>
+                    <div>Semester</div>
+                    <div>Student Score</div>
+                    <div>Peer Score</div>
+                    <div>HOD Score</div>
+                    <div>Final Weighted</div>
+                    <div>Actions</div>
+                  </div>
+                  {sorted.map((row, idx) => (
+                    <div
+                      key={idx}
+                      className="table-row"
+                      role="button"
+                      tabIndex={0}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        const teacherObj = (typeof getUniqueTeachers === 'function')
+                          ? getUniqueTeachers().find(t => t.id === row.teacher_id)
+                          : null;
+                        const teacherName = teacherObj?.name || row.teacher_name || '';
+                        const qp = new URLSearchParams();
+                        if (teacherName) qp.set('instructor', teacherName);
+                        if (row.academic_year) qp.set('academic_year', row.academic_year);
+                        if (row.semester) qp.set('semester', String(row.semester));
+                        navigate(`/department/${id}/results?${qp.toString()}`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          const teacherObj = (typeof getUniqueTeachers === 'function')
+                            ? getUniqueTeachers().find(t => t.id === row.teacher_id)
+                            : null;
+                          const teacherName = teacherObj?.name || row.teacher_name || '';
+                          const qp = new URLSearchParams();
+                          if (teacherName) qp.set('instructor', teacherName);
+                          if (row.academic_year) qp.set('academic_year', row.academic_year);
+                          if (row.semester) qp.set('semester', String(row.semester));
+                          navigate(`/department/${id}/results?${qp.toString()}`);
+                        }
+                      }}
+                    >
+                      <div>{(() => {
+                        const teacherObj = (typeof getUniqueTeachers === 'function')
+                          ? getUniqueTeachers().find(t => t.id === row.teacher_id)
+                          : null;
+                        return teacherObj?.name || row.teacher_name || '—';
+                      })()}</div>
+                      <div>{row.teacher_id}</div>
+                      <div>{row.academic_year}</div>
+                      <div>{row.semester}</div>
+                      <div>{Number(row.student_score).toFixed(2)}%</div>
+                      <div>{Number(row.peer_score).toFixed(2)}%</div>
+                      <div>{Number(row.admin_score).toFixed(2)}%</div>
+                      <div><strong>{Number(row.weighted_score).toFixed(2)}%</strong></div>
+                      <div>
+                        {(() => {
+                          const teacherObj = (typeof getUniqueTeachers === 'function')
+                            ? getUniqueTeachers().find(t => t.id === row.teacher_id)
+                            : null;
+                          const teacherName = teacherObj?.name || row.teacher_name || '';
+                          const canFilterByName = Boolean(teacherName);
+                          const qp = new URLSearchParams();
+                          if (canFilterByName) qp.set('instructor', teacherName);
+                          if (row.academic_year) qp.set('academic_year', row.academic_year);
+                          if (row.semester) qp.set('semester', String(row.semester));
+                          const targetUrl = `/department/${id}/results?${qp.toString()}`;
+                          return (
+                            <button
+                              className="dept-btn dept-btn-link"
+                              title={canFilterByName ? `View evaluations for ${teacherName}` : 'View evaluations'}
+                              aria-label={canFilterByName ? `View evaluations for ${teacherName}` : 'View evaluations'}
+                              onClick={() => navigate(targetUrl)}
+                            >
+                              View Results
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Teacher Performance Comparison */}
           <div className="report-section">
