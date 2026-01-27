@@ -16,12 +16,70 @@ const styles = `
     to { transform: translateY(0); opacity: 1; }
   }
   
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes modalSlideIn {
+    from { 
+      transform: translateY(-50px) scale(0.9); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0) scale(1); 
+      opacity: 1; 
+    }
+  }
+  
+  @keyframes modalSlideInMobile {
+    from { 
+      transform: translateY(100px) scale(0.95); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0) scale(1); 
+      opacity: 1; 
+    }
+  }
+  
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
   .participation-update {
     animation: slideIn 0.3s ease-out;
   }
   
   .low-participation-alert {
     animation: pulse 2s infinite;
+  }
+  
+  .form-transition {
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .modal-overlay {
+    animation: modalFadeIn 0.3s ease-out;
+  }
+  
+  .modal-content {
+    animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  .dept-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .dept-btn:active {
+    transform: translateY(0) !important;
   }
 `;
 
@@ -424,6 +482,54 @@ function DepartmentEvaluations() {
   const [participationAlerts, setParticipationAlerts] = useState([]);
   const [lowParticipationThreshold, setLowParticipationThreshold] = useState(30); // 30%
 
+  // Responsive breakpoints
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800
+  });
+
+  // Update window size on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Responsive breakpoints
+  const isMobile = windowSize.width <= 480;
+  const isTablet = windowSize.width <= 768 && windowSize.width > 480;
+  const isSmallDesktop = windowSize.width <= 1024 && windowSize.width > 768;
+  const isLargeDesktop = windowSize.width > 1024;
+  const isVerySmallMobile = windowSize.width <= 320; // Very small screens
+
+  // Modal keyboard support and body scroll lock
+  useEffect(() => {
+    if (confirming) {
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+      
+      // Handle ESC key to close modal
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape' && !evalSubmitting) {
+          setConfirming(false);
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        document.body.style.overflow = 'unset';
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [confirming, evalSubmitting]);
+
   // Template management state
   const [currentTemplate, setCurrentTemplate] = useState(null);
   const [templateQuestions, setTemplateQuestions] = useState([]);
@@ -434,6 +540,9 @@ function DepartmentEvaluations() {
   const [hodTemplate, setHodTemplate] = useState(null);
   const [hodTemplateQuestions, setHodTemplateQuestions] = useState([]);
   const [hodTemplateLoading, setHodTemplateLoading] = useState(false);
+
+  // Professional form selection state
+  const [activeFormView, setActiveFormView] = useState('student');
 
   // Load department template
   const loadDepartmentTemplate = useCallback(async () => {
@@ -901,125 +1010,895 @@ function DepartmentEvaluations() {
             {evalSubmitting ? 'Preparing…' : 'Next → Confirm'}
           </button>
         </div>
+      </div>
 
         {confirming && (
-          <div style={{ marginTop: 16 }}>
-            <h4>Confirmation</h4>
-            <div style={{ marginBottom: 8, color: 'var(--muted)' }}>
-              Session: {academicYear || currentYear}, {semester} • Open: {openForm.opened_at || '—'} • Close: {openForm.closed_at || '—'}
+          <>
+            {/* Modal Overlay */}
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: isMobile ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+                backdropFilter: isMobile ? 'blur(4px)' : 'blur(8px)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                justifyContent: 'center',
+                padding: isMobile ? '0' : isTablet ? '15px' : '20px',
+                animation: 'modalFadeIn 0.3s ease-out',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
+              }}
+              onClick={(e) => {
+                // Close modal when clicking on overlay (not on modal content)
+                if (e.target === e.currentTarget && !evalSubmitting) {
+                  setConfirming(false);
+                }
+              }}
+            >
+              {/* Modal Content */}
+              <div 
+                style={{ 
+                  width: '100%',
+                  maxWidth: isMobile ? '100%' : isTablet ? '600px' : isSmallDesktop ? '750px' : '900px',
+                  maxHeight: isMobile ? '100vh' : '90vh',
+                  minHeight: isMobile ? '100vh' : 'auto',
+                  animation: isMobile ? 'modalSlideInMobile 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  background: `linear-gradient(135deg, var(--panel) 0%, var(--bg-end) 100%)`,
+                  borderRadius: isMobile ? '0' : isTablet ? '16px' : '20px',
+                  border: isMobile ? 'none' : '2px solid var(--border-soft)',
+                  boxShadow: isMobile ? 'none' : isTablet ? '0 15px 50px rgba(0, 0, 0, 0.25)' : '0 20px 60px rgba(0, 0, 0, 0.3)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  transform: 'scale(1)',
+                  transition: 'transform 0.2s ease',
+                  margin: isMobile ? '0' : isTablet ? '10px' : '20px',
+                  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+              >
+            {/* Header Section */}
+            <div style={{
+              background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+              padding: isMobile ? (isVerySmallMobile ? '16px 12px' : '20px 16px') : isTablet ? '24px 20px' : '32px 40px',
+              color: 'var(--bg-start)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Close Button */}
+              <button
+                onClick={() => setConfirming(false)}
+                disabled={evalSubmitting}
+                style={{
+                  position: 'absolute',
+                  top: isMobile ? (isVerySmallMobile ? '8px' : '12px') : '20px',
+                  right: isMobile ? (isVerySmallMobile ? '8px' : '12px') : '20px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: isMobile ? (isVerySmallMobile ? '32px' : '36px') : '40px',
+                  height: isMobile ? (isVerySmallMobile ? '32px' : '36px') : '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: evalSubmitting ? 'not-allowed' : 'pointer',
+                  fontSize: isMobile ? (isVerySmallMobile ? '16px' : '18px') : '20px',
+                  color: 'white',
+                  transition: 'all 0.3s ease',
+                  opacity: evalSubmitting ? 0.5 : 1,
+                  zIndex: 10,
+                  touchAction: 'manipulation' // Better touch response
+                }}
+                onMouseEnter={(e) => {
+                  if (!evalSubmitting) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                    e.target.style.transform = 'scale(1.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!evalSubmitting) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                    e.target.style.transform = 'scale(1)';
+                  }
+                }}
+              >
+                ✕
+              </button>
+
+              <div style={{
+                position: 'absolute',
+                top: '-50%',
+                right: '-10%',
+                width: isMobile ? '150px' : '200px',
+                height: isMobile ? '150px' : '200px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '50%',
+                transform: 'rotate(45deg)'
+              }} />
+              <div style={{
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: isMobile ? 'flex-start' : 'center', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: isMobile ? 12 : 20, 
+                  marginBottom: isMobile ? 12 : 16,
+                  paddingRight: isMobile ? '40px' : '60px' // Space for close button
+                }}>
+                  <div style={{
+                    width: isMobile ? '48px' : '56px',
+                    height: isMobile ? '48px' : '56px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: isMobile ? '12px' : '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: isMobile ? '24px' : '28px',
+                    flexShrink: 0
+                  }}>
+                    ✅
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2 style={{ 
+                      margin: 0, 
+                      fontSize: isMobile ? '24px' : isTablet ? '28px' : '32px', 
+                      fontWeight: '700',
+                      lineHeight: 1.2
+                    }}>
+                      Evaluation Confirmation
+                    </h2>
+                    <p style={{ 
+                      margin: 0, 
+                      opacity: 0.9, 
+                      fontSize: isMobile ? '14px' : isTablet ? '16px' : '18px',
+                      lineHeight: 1.4
+                    }}>
+                      Review and confirm evaluation settings
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Session Info Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    borderRadius: isMobile ? '12px' : '16px',
+                    padding: isMobile ? '16px' : '20px 24px',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                    gap: isMobile ? 16 : 20 
+                  }}>
+                    <div>
+                      <div style={{ 
+                        fontSize: isMobile ? '12px' : '14px', 
+                        opacity: 0.8, 
+                        marginBottom: isMobile ? 4 : 6 
+                      }}>
+                        Academic Session
+                      </div>
+                      <div style={{ 
+                        fontSize: isMobile ? '16px' : isTablet ? '18px' : '20px', 
+                        fontWeight: '600',
+                        lineHeight: 1.2
+                      }}>
+                        {academicYear || currentYear}, {semester}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ 
+                        fontSize: isMobile ? '12px' : '14px', 
+                        opacity: 0.8, 
+                        marginBottom: isMobile ? 4 : 6 
+                      }}>
+                        Open Date
+                      </div>
+                      <div style={{ 
+                        fontSize: isMobile ? '16px' : isTablet ? '18px' : '20px', 
+                        fontWeight: '600',
+                        lineHeight: 1.2
+                      }}>
+                        {openForm.opened_at ? new Date(openForm.opened_at).toLocaleDateString('en-US', { 
+                          weekday: isMobile ? undefined : 'short', 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        }) : '—'}
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: isMobile ? '1' : isTablet ? '1 / -1' : 'auto' }}>
+                      <div style={{ 
+                        fontSize: isMobile ? '12px' : '14px', 
+                        opacity: 0.8, 
+                        marginBottom: isMobile ? 4 : 6 
+                      }}>
+                        Close Date
+                      </div>
+                      <div style={{ 
+                        fontSize: isMobile ? '16px' : isTablet ? '18px' : '20px', 
+                        fontWeight: '600',
+                        lineHeight: 1.2
+                      }}>
+                        {openForm.closed_at ? new Date(openForm.closed_at).toLocaleDateString('en-US', { 
+                          weekday: isMobile ? undefined : 'short', 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        }) : 'No end date'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              {/* Box 1: Student Evaluation */}
-              <div style={{ padding: 12, border: '1px solid #dee2e6', borderRadius: 8, background: '#fff' }}>
-                <h5 style={{ margin: 0 }}>Student Evaluation</h5>
-                <p style={{ color: 'var(--muted)' }}>Student evaluation will be ENABLED</p>
-                <ul style={{ marginTop: 8 }}>
-                  {assignedCoursesForTeacher.length === 0 ? (
-                    <li style={{ color: 'var(--muted)' }}>No assigned courses found for this instructor.</li>
+
+            {/* Content Section - Scrollable Body */}
+            <div style={{ 
+              flex: 1,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              padding: isMobile ? (isVerySmallMobile ? '16px 12px' : '20px 16px') : isTablet ? '24px 20px' : '40px' 
+            }}>
+              {/* Evaluation Types Table */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : 'repeat(3, 1fr)', 
+                gap: isMobile ? (isVerySmallMobile ? 12 : 16) : isTablet ? 20 : 24,
+                marginBottom: isMobile ? (isVerySmallMobile ? 20 : 24) : isTablet ? 32 : 40
+              }}>
+                {/* Student Evaluation */}
+                <div style={{ 
+                  background: `linear-gradient(135deg, var(--panel) 0%, var(--bg-end) 100%)`,
+                  border: `2px solid var(--primary)`,
+                  borderRadius: isMobile ? '10px' : '12px',
+                  padding: isMobile ? (isVerySmallMobile ? '12px' : '16px') : '20px',
+                  boxShadow: '0 4px 20px rgba(34, 211, 238, 0.15)',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: isMobile ? 8 : 12, 
+                    marginBottom: isMobile ? 12 : 16,
+                    flexWrap: isMobile ? 'wrap' : 'nowrap'
+                  }}>
+                    <div style={{
+                      width: isMobile ? '32px' : '36px',
+                      height: isMobile ? '32px' : '36px',
+                      background: 'var(--primary)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: isMobile ? '16px' : '18px',
+                      flexShrink: 0
+                    }}>
+                      👥
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h5 style={{ 
+                        margin: 0, 
+                        color: 'var(--primary)', 
+                        fontSize: isMobile ? '16px' : '18px', 
+                        fontWeight: '700',
+                        lineHeight: 1.2
+                      }}>
+                        Student Evaluation
+                      </h5>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        background: 'rgba(39, 174, 96, 0.1)',
+                        color: '#27ae60',
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: isMobile ? '10px' : '11px',
+                        fontWeight: '600',
+                        marginTop: 2
+                      }}>
+                        ENABLED
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ 
+                    color: 'var(--muted)', 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    marginBottom: isMobile ? 12 : 16,
+                    lineHeight: 1.4
+                  }}>
+                    Student evaluation will be ENABLED
+                  </p>
+
+                  <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+                    {assignedCoursesForTeacher.length === 0 ? (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        padding: isMobile ? '12px' : '16px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(245, 158, 11, 0.3)'
+                      }}>
+                        <div style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: 6 }}>⚠️</div>
+                        <div style={{ 
+                          color: 'var(--muted)', 
+                          fontSize: isMobile ? '12px' : '13px',
+                          lineHeight: 1.3
+                        }}>
+                          No assigned courses found for this instructor.
+                        </div>
+                      </div>
+                    ) : (
+                      <ul style={{ 
+                        margin: 0, 
+                        paddingLeft: isMobile ? 12 : 16, 
+                        fontSize: isMobile ? '13px' : '14px', 
+                        color: 'var(--text)',
+                        lineHeight: 1.4
+                      }}>
+                        {assignedCoursesForTeacher.map((c) => {
+                          const teacherId = Number(openForm.teacher_id);
+                          const pivot = (c.teachers || []).find(t => t.id === teacherId)?.pivot || {};
+                          const year = pivot?.year_level ?? c.year_level ?? '—';
+                          return (
+                            <li key={c.id} style={{ marginBottom: 4 }}>
+                              {c.title} — Year {year}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                {/* Peer Evaluation */}
+                <div style={{ 
+                  background: `linear-gradient(135deg, var(--panel) 0%, var(--bg-end) 100%)`,
+                  border: '2px solid #27ae60',
+                  borderRadius: isMobile ? '10px' : '12px',
+                  padding: isMobile ? (isVerySmallMobile ? '12px' : '16px') : '20px',
+                  boxShadow: '0 4px 20px rgba(39, 174, 96, 0.15)',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: isMobile ? 8 : 12, 
+                    marginBottom: isMobile ? 12 : 16,
+                    flexWrap: isMobile ? 'wrap' : 'nowrap'
+                  }}>
+                    <div style={{
+                      width: isMobile ? '32px' : '36px',
+                      height: isMobile ? '32px' : '36px',
+                      background: '#27ae60',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: isMobile ? '16px' : '18px',
+                      flexShrink: 0
+                    }}>
+                      🤝
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h5 style={{ 
+                        margin: 0, 
+                        color: '#27ae60', 
+                        fontSize: isMobile ? '16px' : '18px', 
+                        fontWeight: '700',
+                        lineHeight: 1.2
+                      }}>
+                        Peer Evaluation
+                      </h5>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        background: 'rgba(39, 174, 96, 0.1)',
+                        color: '#27ae60',
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: isMobile ? '10px' : '11px',
+                        fontWeight: '600',
+                        marginTop: 2
+                      }}>
+                        ENABLED
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ 
+                    color: 'var(--muted)', 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    marginBottom: isMobile ? 12 : 16,
+                    lineHeight: 1.4
+                  }}>
+                    Peer evaluation will be ENABLED
+                  </p>
+
+                  <ul style={{ 
+                    margin: 0, 
+                    paddingLeft: isMobile ? 12 : 16, 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    color: 'var(--text)',
+                    lineHeight: 1.4
+                  }}>
+                    <li style={{ marginBottom: 4 }}>Peer teachers can evaluate other teachers</li>
+                    <li style={{ marginBottom: 4 }}>Once per semester</li>
+                    <li style={{ marginBottom: 4 }}>No course logic here — correct</li>
+                  </ul>
+                </div>
+
+                {/* HOD Evaluation */}
+                <div style={{ 
+                  background: `linear-gradient(135deg, var(--panel) 0%, var(--bg-end) 100%)`,
+                  border: '2px solid #e74c3c',
+                  borderRadius: isMobile ? '10px' : '12px',
+                  padding: isMobile ? (isVerySmallMobile ? '12px' : '16px') : '20px',
+                  boxShadow: '0 4px 20px rgba(231, 76, 60, 0.15)',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                  gridColumn: isMobile ? '1' : isTablet ? '1 / -1' : 'auto'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: isMobile ? 8 : 12, 
+                    marginBottom: isMobile ? 12 : 16,
+                    flexWrap: isMobile ? 'wrap' : 'nowrap'
+                  }}>
+                    <div style={{
+                      width: isMobile ? '32px' : '36px',
+                      height: isMobile ? '32px' : '36px',
+                      background: '#e74c3c',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: isMobile ? '16px' : '18px',
+                      flexShrink: 0
+                    }}>
+                      👔
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h5 style={{ 
+                        margin: 0, 
+                        color: '#e74c3c', 
+                        fontSize: isMobile ? '16px' : '18px', 
+                        fontWeight: '700',
+                        lineHeight: 1.2
+                      }}>
+                        HOD Evaluation
+                      </h5>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        background: 'rgba(39, 174, 96, 0.1)',
+                        color: '#27ae60',
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: isMobile ? '10px' : '11px',
+                        fontWeight: '600',
+                        marginTop: 2
+                      }}>
+                        ENABLED
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ 
+                    color: 'var(--muted)', 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    marginBottom: isMobile ? 12 : 16,
+                    lineHeight: 1.4
+                  }}>
+                    HOD evaluation will be ENABLED
+                  </p>
+
+                  <ul style={{ 
+                    margin: 0, 
+                    paddingLeft: isMobile ? 12 : 16, 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    color: 'var(--text)',
+                    lineHeight: 1.4
+                  }}>
+                    <li style={{ marginBottom: 4 }}>Only users with HOD role can access</li>
+                    <li style={{ marginBottom: 4 }}>Done once per semester</li>
+                    <li style={{ marginBottom: 4 }}>Simple and clean — correct</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+              {/* Action Buttons - Fixed Footer */}
+              <div style={{ 
+                display: 'flex', 
+                gap: isMobile ? 12 : isTablet ? 16 : 20, 
+                justifyContent: isMobile ? 'stretch' : 'flex-end',
+                alignItems: 'center',
+                padding: isMobile ? (isVerySmallMobile ? '16px 12px' : '20px 16px') : isTablet ? '20px' : '24px 40px',
+                borderTop: `2px solid var(--border-soft)`,
+                flexDirection: isMobile ? 'column-reverse' : 'row',
+                background: 'var(--panel)',
+                flexShrink: 0 // Prevent shrinking
+              }}>
+                <button 
+                  className="dept-btn dept-btn-ghost" 
+                  onClick={() => setConfirming(false)} 
+                  disabled={evalSubmitting}
+                  style={{
+                    padding: isMobile ? '16px 24px' : isTablet ? '14px 28px' : '14px 28px',
+                    fontSize: isMobile ? '16px' : isTablet ? '16px' : '16px',
+                    fontWeight: '600',
+                    borderRadius: isMobile ? '12px' : '12px',
+                    border: `2px solid var(--muted)`,
+                    color: 'var(--muted)',
+                    background: 'transparent',
+                    transition: 'all 0.3s ease',
+                    opacity: evalSubmitting ? 0.5 : 1,
+                    cursor: evalSubmitting ? 'not-allowed' : 'pointer',
+                    width: isMobile ? '100%' : 'auto',
+                    minHeight: isMobile ? '48px' : isTablet ? '44px' : 'auto',
+                    touchAction: 'manipulation' // Better touch response
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="dept-btn dept-btn-primary" 
+                  onClick={finalizeOpen} 
+                  disabled={evalSubmitting}
+                  style={{
+                    padding: isMobile ? '16px 24px' : isTablet ? '14px 32px' : '14px 36px',
+                    fontSize: isMobile ? '16px' : isTablet ? '16px' : '16px',
+                    fontWeight: '700',
+                    borderRadius: isMobile ? '12px' : '12px',
+                    background: evalSubmitting 
+                      ? 'var(--muted)'
+                      : `linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)`,
+                    border: 'none',
+                    color: evalSubmitting ? 'var(--text)' : 'var(--bg-start)',
+                    boxShadow: evalSubmitting ? 'none' : isMobile ? '0 4px 16px rgba(34, 211, 238, 0.3)' : '0 6px 20px rgba(34, 211, 238, 0.4)',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isMobile ? 8 : 10,
+                    cursor: evalSubmitting ? 'not-allowed' : 'pointer',
+                    width: isMobile ? '100%' : 'auto',
+                    minHeight: isMobile ? '48px' : isTablet ? '44px' : 'auto',
+                    touchAction: 'manipulation', // Better touch response
+                    textAlign: 'center'
+                  }}
+                >
+                  {evalSubmitting ? (
+                    <>
+                      <div style={{
+                        width: isMobile ? '16px' : '18px',
+                        height: isMobile ? '16px' : '18px',
+                        border: `2px solid var(--border-soft)`,
+                        borderTop: `2px solid var(--text)`,
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        flexShrink: 0
+                      }} />
+                      <span style={{ 
+                        fontSize: isMobile ? '14px' : '16px',
+                        whiteSpace: isMobile ? 'nowrap' : 'normal'
+                      }}>
+                        {isMobile ? 'Opening...' : 'Opening...'}
+                      </span>
+                    </>
                   ) : (
-                    assignedCoursesForTeacher.map((c) => {
-                      const teacherId = Number(openForm.teacher_id);
-                      const pivot = (c.teachers || []).find(t => t.id === teacherId)?.pivot || {};
-                      const year = pivot?.year_level ?? c.year_level ?? '—';
-                      return (
-                        <li key={c.id}>{c.title} — Year {year}</li>
-                      );
-                    })
+                    <span style={{ 
+                      fontSize: isMobile ? '14px' : '16px',
+                      whiteSpace: isMobile ? 'nowrap' : 'normal'
+                    }}>
+                      {isMobile ? 'Confirm & Open' : isTablet ? 'Confirm & Open' : 'Confirm & Open Evaluations'}
+                    </span>
                   )}
-                </ul>
-                <small style={{ color: 'var(--muted)' }}>
-                  Display assigned courses here, e.g. HCI for 2nd year, Networking for 4th year
-                </small>
-              </div>
-
-              {/* Box 2: Peer Evaluation */}
-              <div style={{ padding: 12, border: '1px solid #dee2e6', borderRadius: 8, background: '#fff' }}>
-                <h5 style={{ margin: 0 }}>Peer Evaluation</h5>
-                <p style={{ color: 'var(--muted)' }}>Peer evaluation will be ENABLED</p>
-                <ul style={{ marginTop: 8 }}>
-                  <li>Peer teachers can evaluate other teachers</li>
-                  <li>Once per semester</li>
-                  <li>No course logic here — correct</li>
-                </ul>
-              </div>
-
-              {/* Box 3: HOD Evaluation */}
-              <div style={{ padding: 12, border: '1px solid #dee2e6', borderRadius: 8, background: '#fff' }}>
-                <h5 style={{ margin: 0 }}>HOD Evaluation</h5>
-                <p style={{ color: 'var(--muted)' }}>HOD evaluation will be ENABLED</p>
-                <ul style={{ marginTop: 8 }}>
-                  <li>Only users with HOD role can access</li>
-                  <li>Done once per semester</li>
-                  <li>Simple and clean — correct</li>
-                </ul>
+                </button>
               </div>
             </div>
+          </div>
+        </>
+      )}
 
-            <div style={{ marginTop: 12, textAlign: 'right' }}>
-              <button className="dept-btn dept-btn-primary" onClick={finalizeOpen} disabled={evalSubmitting}>
-                {evalSubmitting ? 'Opening…' : 'Confirmation → Open'}
-              </button>
-              <button className="dept-btn dept-btn-ghost" style={{ marginLeft: 8 }} onClick={() => setConfirming(false)} disabled={evalSubmitting}>
-                Cancel
-              </button>
+      <div className="dept-card" style={{ marginTop: 12 }}>
+        <h3>Evaluation Form Management</h3>
+        <p style={{ color: 'var(--muted)' }}>Configure evaluation templates for different audiences. Select a form type below to manage its questions and settings.</p>
+        
+        {/* Professional Form Selection Buttons */}
+        <div style={{ 
+          display: 'flex', 
+          gap: 12, 
+          marginTop: 16, 
+          marginBottom: 24,
+          borderBottom: `2px solid var(--border-soft)`,
+          paddingBottom: 16
+        }}>
+          <button
+            className={`dept-btn ${activeFormView === 'student' ? 'dept-btn-primary' : 'dept-btn-ghost'}`}
+            onClick={() => setActiveFormView('student')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRadius: '8px',
+              transition: 'all 0.3s ease',
+              border: activeFormView === 'student' ? `2px solid var(--primary)` : '2px solid transparent',
+              backgroundColor: activeFormView === 'student' ? 'var(--primary)' : 'var(--panel)',
+              color: activeFormView === 'student' ? 'var(--bg-start)' : 'var(--text)',
+              boxShadow: activeFormView === 'student' ? '0 4px 12px rgba(34, 211, 238, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+              transform: activeFormView === 'student' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>👥</span>
+            <div style={{ textAlign: 'left' }}>
+              <div>Student Evaluation</div>
+              <div style={{ 
+                fontSize: '11px', 
+                opacity: 0.8, 
+                fontWeight: '400',
+                marginTop: '2px'
+              }}>
+                Questions for student feedback
+              </div>
+            </div>
+          </button>
+
+          <button
+            className={`dept-btn ${activeFormView === 'peer' ? 'dept-btn-primary' : 'dept-btn-ghost'}`}
+            onClick={() => setActiveFormView('peer')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRadius: '8px',
+              transition: 'all 0.3s ease',
+              border: activeFormView === 'peer' ? '2px solid #27ae60' : '2px solid transparent',
+              backgroundColor: activeFormView === 'peer' ? '#27ae60' : 'var(--panel)',
+              color: activeFormView === 'peer' ? 'white' : 'var(--text)',
+              boxShadow: activeFormView === 'peer' ? '0 4px 12px rgba(39, 174, 96, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+              transform: activeFormView === 'peer' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>🤝</span>
+            <div style={{ textAlign: 'left' }}>
+              <div>Peer Evaluation</div>
+              <div style={{ 
+                fontSize: '11px', 
+                opacity: 0.8, 
+                fontWeight: '400',
+                marginTop: '2px'
+              }}>
+                Teacher-to-teacher assessment
+              </div>
+            </div>
+          </button>
+
+          <button
+            className={`dept-btn ${activeFormView === 'hod' ? 'dept-btn-primary' : 'dept-btn-ghost'}`}
+            onClick={() => setActiveFormView('hod')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRadius: '8px',
+              transition: 'all 0.3s ease',
+              border: activeFormView === 'hod' ? '2px solid #e74c3c' : '2px solid transparent',
+              backgroundColor: activeFormView === 'hod' ? '#e74c3c' : 'var(--panel)',
+              color: activeFormView === 'hod' ? 'white' : 'var(--text)',
+              boxShadow: activeFormView === 'hod' ? '0 4px 12px rgba(231, 76, 60, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+              transform: activeFormView === 'hod' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>👔</span>
+            <div style={{ textAlign: 'left' }}>
+              <div>HOD Evaluation</div>
+              <div style={{ 
+                fontSize: '11px', 
+                opacity: 0.8, 
+                fontWeight: '400',
+                marginTop: '2px'
+              }}>
+                Administrative assessment
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Dynamic Form Content Based on Selection */}
+        <div style={{
+          minHeight: '400px',
+          padding: '20px',
+          backgroundColor: 'var(--bg-end)',
+          borderRadius: '12px',
+          border: `1px solid var(--border-soft)`,
+          transition: 'all 0.3s ease'
+        }}>
+          {/* Student Evaluation Form */}
+          {activeFormView === 'student' && (
+            <div style={{ animation: 'slideIn 0.3s ease-out' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 12, 
+                marginBottom: 16,
+                paddingBottom: 12,
+                borderBottom: '2px solid #3498db'
+              }}>
+                <span style={{ fontSize: '24px' }}>👥</span>
+                <div>
+                  <h4 style={{ margin: 0, color: '#3498db' }}>Student Evaluation Template</h4>
+                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '14px' }}>
+                    Configure the evaluation questions that students will use to assess instructors
+                  </p>
+                </div>
+              </div>
+              {templateLoading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                  <div style={{ fontSize: '18px', marginBottom: 8 }}>🔄</div>
+                  <p style={{ color: 'var(--muted)' }}>Loading student evaluation template...</p>
+                </div>
+              ) : (
+                <DepartmentTemplateManager 
+                  departmentId={deptId}
+                  template={currentTemplate}
+                  questions={templateQuestions}
+                  onTemplateSaved={refreshTemplate}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Peer Evaluation Form */}
+          {activeFormView === 'peer' && (
+            <div style={{ animation: 'slideIn 0.3s ease-out' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 12, 
+                marginBottom: 16,
+                paddingBottom: 12,
+                borderBottom: '2px solid #27ae60'
+              }}>
+                <span style={{ fontSize: '24px' }}>🤝</span>
+                <div>
+                  <h4 style={{ margin: 0, color: '#27ae60' }}>Peer Evaluation Template</h4>
+                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '14px' }}>
+                    Configure the questions peers use when evaluating fellow instructors
+                  </p>
+                </div>
+              </div>
+              {peerTemplateLoading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                  <div style={{ fontSize: '18px', marginBottom: 8 }}>🔄</div>
+                  <p style={{ color: 'var(--muted)' }}>Loading peer evaluation template...</p>
+                </div>
+              ) : (
+                <DepartmentTemplateManager 
+                  departmentId={deptId}
+                  template={peerTemplate}
+                  questions={peerTemplateQuestions}
+                  onTemplateSaved={refreshTemplate}
+                  audience="peer"
+                />
+              )}
+            </div>
+          )}
+
+          {/* HOD Evaluation Form */}
+          {activeFormView === 'hod' && (
+            <div style={{ animation: 'slideIn 0.3s ease-out' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 12, 
+                marginBottom: 16,
+                paddingBottom: 12,
+                borderBottom: '2px solid #e74c3c'
+              }}>
+                <span style={{ fontSize: '24px' }}>👔</span>
+                <div>
+                  <h4 style={{ margin: 0, color: '#e74c3c' }}>HOD Evaluation Template</h4>
+                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '14px' }}>
+                    Configure the questions HODs use when evaluating instructors
+                  </p>
+                </div>
+              </div>
+              {hodTemplateLoading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                  <div style={{ fontSize: '18px', marginBottom: 8 }}>🔄</div>
+                  <p style={{ color: 'var(--muted)' }}>Loading HOD evaluation template...</p>
+                </div>
+              ) : (
+                <DepartmentTemplateManager
+                  departmentId={deptId}
+                  template={hodTemplate}
+                  questions={hodTemplateQuestions}
+                  onTemplateSaved={refreshTemplate}
+                  audience="hod"
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Form Statistics */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: 16, 
+          marginTop: 20,
+          padding: '16px 0'
+        }}>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: 16, 
+            backgroundColor: 'var(--panel)', 
+            borderRadius: 8, 
+            border: `1px solid var(--border-soft)`,
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary)' }}>
+              {templateQuestions.length}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: 4 }}>
+              Student Questions
             </div>
           </div>
-        )}
-      </div>
-
-      <div className="dept-card" style={{ marginTop: 12 }}>
-        <h4>Department Evaluation Template</h4>
-        <p style={{ color: 'var(--muted)' }}>Configure the evaluation questions that will be used for all evaluations in this department. Students will see these questions when filling out any evaluation.</p>
-        {templateLoading ? (
-          <div style={{ textAlign: 'center', padding: 20 }}>
-            <p>Loading template...</p>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: 16, 
+            backgroundColor: 'var(--panel)', 
+            borderRadius: 8, 
+            border: `1px solid var(--border-soft)`,
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60' }}>
+              {peerTemplateQuestions.length}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: 4 }}>
+              Peer Questions
+            </div>
           </div>
-        ) : (
-          <DepartmentTemplateManager 
-            departmentId={deptId}
-            template={currentTemplate}
-            questions={templateQuestions}
-            onTemplateSaved={refreshTemplate}
-          />
-        )}
-      </div>
-
-      {/* Peer Evaluation Template */}
-      <div className="dept-card" style={{ marginTop: 12 }}>
-        <h4>Peer Evaluation Template</h4>
-        <p style={{ color: 'var(--muted)' }}>Configure the questions peers use when evaluating instructors. Managed separately from student questions.</p>
-        {peerTemplateLoading ? (
-          <div style={{ textAlign: 'center', padding: 20 }}>
-            <p>Loading peer template...</p>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: 16, 
+            backgroundColor: 'var(--panel)', 
+            borderRadius: 8, 
+            border: `1px solid var(--border-soft)`,
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e74c3c' }}>
+              {hodTemplateQuestions.length}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: 4 }}>
+              HOD Questions
+            </div>
           </div>
-        ) : (
-          <DepartmentTemplateManager 
-            departmentId={deptId}
-            template={peerTemplate}
-            questions={peerTemplateQuestions}
-            onTemplateSaved={refreshTemplate}
-            audience="peer"
-          />
-        )}
-      </div>
-
-      {/* HOD Evaluation Template */}
-      <div className="dept-card" style={{ marginTop: 12 }}>
-        <h4>HOD Evaluation Template</h4>
-        <p style={{ color: 'var(--muted)' }}>Configure the questions HODs use when evaluating instructors. Managed separately from student and peer questions.</p>
-        {hodTemplateLoading ? (
-          <div style={{ textAlign: 'center', padding: 20 }}>
-            <p>Loading HOD template...</p>
-          </div>
-        ) : (
-          <DepartmentTemplateManager
-            departmentId={deptId}
-            template={hodTemplate}
-            questions={hodTemplateQuestions}
-            onTemplateSaved={refreshTemplate}
-            audience="hod"
-          />
-        )}
+        </div>
       </div>
 
       {/* HOD evaluations tables removed per request */}
