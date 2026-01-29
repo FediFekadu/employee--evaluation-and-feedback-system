@@ -23,66 +23,56 @@ const EvaluationCard = memo(({
   };
 
   return (
-    <div className="evaluation-card compact">
-      <div className="compact-top">
-        <div className="course-block">
-          <div className="title-row">
-            <span className="course-title">{evaluation.course?.title || 'Unknown Course'}</span>
-          </div>
-          <div className="instructor-row">
-            <div className="avatar-small">
-              <span className="avatar-initials">
-                {evaluation.teacher?.name ?
-                  evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
-                  'UN'
-                }
-              </span>
-            </div>
-            <span className="instructor-name">{evaluation.teacher?.name || 'Unknown Instructor'}</span>
+    <div className="evaluation-card professional">
+      <div className="card-header">
+        <div className="course-info">
+          <h4 className="course-title">{evaluation.course?.title || 'Unknown Course'}</h4>
+          <div className="course-meta">
             <span className="course-code">{evaluation.course?.code || 'N/A'}</span>
-            <span className="opened-date">{evaluation.opened_at ? new Date(evaluation.opened_at).toLocaleDateString() : 'N/A'}</span>
+            <span className="separator">•</span>
+            <span className="semester">{evaluation.academic_year || '2026'} • {evaluation.semester || 'Semester I'}</span>
           </div>
         </div>
-        <div className="status-block">
-          <StatusBadge status={evaluation.status} type="evaluation" />
+        <StatusBadge status={evaluation.status} type="evaluation" />
+      </div>
+
+      <div className="card-body">
+        <div className="instructor-section">
+          <div className="instructor-avatar">
+            {evaluation.teacher?.name ?
+              evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
+              'UN'
+            }
+          </div>
+          <div className="instructor-details">
+            <span className="instructor-name">{evaluation.teacher?.name || 'Unknown Instructor'}</span>
+            <span className="department">Department: {evaluation.department || 'Software Engineering'}</span>
+          </div>
+        </div>
+
+        <div className="evaluation-meta">
+          <div className="meta-item">
+            <span className="meta-label">Opened:</span>
+            <span className="meta-value">
+              {evaluation.opened_at ? new Date(evaluation.opened_at).toLocaleDateString() : 'N/A'}
+            </span>
+          </div>
+          {evaluation.participation && (
+            <div className="meta-item">
+              <span className="meta-label">Responses:</span>
+              <span className="meta-value">{evaluation.participation.total_responses || 0}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="compact-middle">
-        <div className="participation-inline">
-          <ParticipationIndicator
-            rate={evaluation.participation?.participation_rate || 0}
-            variant="bar"
-            size="small"
-            showPercentage={true}
-            showLabel={false}
-          />
-          <span className="responses-chip">
-            {evaluation.participation?.total_responses || 0} responses
-          </span>
-        </div>
-        {evaluation.weighted_scores && (
-          <div className="final-score-inline">
-            <span className={`final-score-badge compact ${getPerformanceClass(evaluation.weighted_scores.performance_level)}`}>
-              <span className="score-icon">⭐</span>
-              <span className="score-value">{evaluation.weighted_scores.weighted_score}%</span>
-              <span className="performance-level">{evaluation.weighted_scores.performance_level}</span>
-            </span>
-            <span className="breakdown-inline">
-              Stu {evaluation.weighted_scores.student_score}% • Peer {evaluation.weighted_scores.peer_score}% • HOD {evaluation.weighted_scores.admin_score}%
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="compact-actions">
+      <div className="card-footer">
         <button
-          className="dept-btn dept-btn-primary card-action-btn"
+          className="btn-primary compact"
           onClick={handleViewResults}
         >
           View Results
         </button>
-        <span className="evaluation-id">ID: {evaluation.id}</span>
       </div>
     </div>
   );

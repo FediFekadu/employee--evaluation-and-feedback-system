@@ -8,13 +8,9 @@ import DepartmentResultsErrorManager from '../../../components/ErrorHandling/Dep
 import ResultsPageFallback from '../../../components/ErrorHandling/ResultsPageFallback';
 import StatusBadge from '../../../components/StatusBadge';
 import ParticipationIndicator from '../../../components/ParticipationIndicator';
-import EvaluationCard from '../../../components/EvaluationCard';
 import ExportControls from '../../../components/ExportControls';
 import ExportNotification from '../../../components/ExportNotification';
 import Pagination from '../../../components/Pagination';
-import VisualAnalytics from '../../../components/VisualAnalytics';
-import TeacherRankings from '../../../components/TeacherRankings';
-import PerformanceInsights from '../../../components/PerformanceInsights';
 import { useExport } from '../../../hooks/useExport';
 import { useDebounce } from '../../../hooks/useDebounce';
 import { useErrorHandling } from '../../../hooks/useErrorHandling';
@@ -38,14 +34,11 @@ function Results() {
   const [error, setError] = useState(null);
   const [criticalError, setCriticalError] = useState(null);
   
-  // View state for analytics tabs
-  const [activeView, setActiveView] = useState('evaluations'); // 'evaluations', 'analytics', 'rankings', 'insights'
+  // View state - only evaluations view now
+  const [activeView, setActiveView] = useState('evaluations');
   
   // Refresh state
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState(null);
-  const [refreshSuccess, setRefreshSuccess] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(null);
 
   // Performance optimization state
   const [performanceMode, setPerformanceMode] = useState('normal');
@@ -53,12 +46,6 @@ function Results() {
 
   // Simple state management for evaluation results
   const [evaluations, setEvaluations] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState('connected');
-  const [lastUpdate, setLastUpdate] = useState(null);
-  const [errorRecoveryStatus, setErrorRecoveryStatus] = useState('stable');
-  const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
-  const [isConnected, setIsConnected] = useState(true);
-  const [isPolling, setIsPolling] = useState(false);
 
   // Simple refresh and reconnect functions
   const refreshData = useCallback(async () => {
@@ -70,28 +57,10 @@ function Results() {
       if (f.instructor) params.instructor = f.instructor;
       const response = await api.get(`/departments/${id}/evaluation-results`, { params });
       setEvaluations(response.data?.data || []);
-      setLastUpdate(new Date());
     } catch (error) {
       console.error('Failed to refresh evaluation results:', error);
     }
   }, [id]);
-
-  const reconnect = useCallback(() => {
-    refreshData();
-  }, [refreshData]);
-
-  const toggleLiveUpdates = useCallback(() => {
-    setLiveUpdatesEnabled(prev => !prev);
-  }, []);
-
-  const getConnectionStats = useCallback(() => {
-    return {
-      status: connectionStatus,
-      lastUpdate,
-      isConnected,
-      isPolling
-    };
-  }, [connectionStatus, lastUpdate, isConnected, isPolling]);
   
   // Export functionality using the useExport hook
   const {
@@ -185,10 +154,6 @@ function Results() {
       // Prefer `data.data` shape, fallback to `data`
       const evals = evalRes?.data?.data ?? evalRes?.data ?? [];
       setEvaluations(evals);
-      setLastUpdate(new Date());
-      setConnectionStatus('connected');
-      setIsConnected(true);
-      setLastRefresh(new Date());
 
     } catch (err) {
       console.error('Failed to load department data:', err);
@@ -212,32 +177,16 @@ function Results() {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      setRefreshError(null);
-      setRefreshSuccess(false);
       
       // Use enhanced API call for refresh
       await handleApiCall(
         () => refreshData(),
         'data_refresh'
       );
-      
-      setLastRefresh(new Date());
-      setRefreshSuccess(true);
-      
-      // Auto-hide success message after 3 seconds
-      setTimeout(() => {
-        setRefreshSuccess(false);
-      }, 3000);
 
     } catch (err) {
       console.error('Failed to refresh data:', err);
       const errorId = addError(err, 'data_refresh');
-      setRefreshError(err.response?.data?.message || 'Failed to refresh data. Please try the recovery options below.');
-      
-      // Auto-hide error message after 10 seconds
-      setTimeout(() => {
-        setRefreshError(null);
-      }, 10000);
     } finally {
       setRefreshing(false);
     }
@@ -334,8 +283,13 @@ function Results() {
           bVal = b.status || '';
           break;
         case 'participation':
-          aVal = a.participation?.participation_rate || 0;
-          bVal = b.participation?.participation_rate || 0;
+          // Sort by final score instead of participation rate
+          aVal = a.final_score || 
+                 a.weighted_scores?.weighted_score || 
+                 a.participation?.participation_rate || 0;
+          bVal = b.final_score || 
+                 b.weighted_scores?.weighted_score || 
+                 b.participation?.participation_rate || 0;
           break;
         case 'opened_at':
         default:
@@ -451,12 +405,6 @@ function Results() {
   const handleRetry = () => {
     setError(null);
     loadDepartmentData();
-  };
-
-  // Handle refresh error retry
-  const handleRefreshRetry = () => {
-    setRefreshError(null);
-    handleRefresh();
   };
 
   // Handle data reduction for performance optimization
@@ -618,175 +566,46 @@ function Results() {
           />
           
           <div className="dashboard-header">
-            <div>
-              <h1>Evaluation Results</h1>
-              <p>Comprehensive evaluation analytics and reporting for {department?.name}</p>
-              <div className="header-meta">
-                {(lastRefresh || lastUpdate) && (
-                  <div className="last-refresh">
-                    Last updated: {(lastUpdate || lastRefresh)?.toLocaleString()}
-                  </div>
-                )}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 12px',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: 4,
-                  fontSize: '0.8em'
-                }}>
-                  <span>🔄</span>
-                  <span>Manual Refresh Mode</span>
-                </div>
-                {dataReductionApplied && (
-                  <div className="performance-notice">
-                    <span className="performance-icon">⚡</span>
-                    <span>Performance mode active</span>
-                  </div>
-                )}
+            <div className="header-content">
+              <div className="header-main">
+                <h1 className="page-title">Evaluation Results</h1>
+                <p className="page-description">Comprehensive evaluation analytics and reporting for {department?.name}</p>
+              </div>
+              <div className="header-actions">
+                <ExportControls
+                  onExport={handleExportAll}
+                  loading={exportLoading}
+                  disabled={filteredEvaluations.length === 0}
+                  formats={['csv', 'excel']}
+                  size="small"
+                  variant="dropdown"
+                />
+                <button 
+                  className="dept-btn dept-btn-primary refresh-btn"
+                  onClick={handleRefresh}
+                  disabled={refreshing || loading}
+                  title="Refresh evaluation data"
+                >
+                  {refreshing ? (
+                    <>
+                      <LoadingSpinner size="small" />
+                      <span>Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                        <path d="M3 21v-5h5"/>
+                      </svg>
+                      <span>Refresh</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-        <div className="header-actions">
-          <div className="live-updates-toggle">
-            <label className="toggle-label">
-              <input
-                type="checkbox"
-                checked={liveUpdatesEnabled}
-                onChange={(e) => toggleLiveUpdates(e.target.checked)}
-                className="toggle-checkbox"
-                id="live-updates-toggle"
-                aria-describedby="live-updates-description"
-              />
-              <span className="toggle-slider"></span>
-              <span className="toggle-text">Live Updates</span>
-              <span id="live-updates-description" className="sr-only">
-                Enable or disable live updates for evaluation data
-              </span>
-            </label>
           </div>
-          <ExportControls
-            onExport={handleExportAll}
-            loading={exportLoading}
-            disabled={filteredEvaluations.length === 0}
-            formats={['csv', 'excel']}
-            size="small"
-            variant="dropdown"
-          />
-          <button 
-            className="dept-btn dept-btn-ghost refresh-btn"
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            title="Refresh evaluation data"
-          >
-            {refreshing ? (
-              <>
-                <LoadingSpinner size="small" />
-                <span>Refreshing...</span>
-              </>
-            ) : (
-              <>
-                <span className="refresh-icon">🔄</span>
-                <span>Refresh Data</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* View Navigation Tabs */}
-      <div className="view-tabs">
-        <button 
-          className={`view-tab ${activeView === 'evaluations' ? 'active' : ''}`}
-          onClick={() => setActiveView('evaluations')}
-        >
-          📊 Evaluations
-        </button>
-        <button 
-          className={`view-tab ${activeView === 'analytics' ? 'active' : ''}`}
-          onClick={() => setActiveView('analytics')}
-        >
-          📈 Visual Analytics
-        </button>
-        <button 
-          className={`view-tab ${activeView === 'rankings' ? 'active' : ''}`}
-          onClick={() => setActiveView('rankings')}
-        >
-          🏆 Teacher Rankings
-        </button>
-        <button 
-          className={`view-tab ${activeView === 'insights' ? 'active' : ''}`}
-          onClick={() => setActiveView('insights')}
-        >
-          💡 Performance Insights
-        </button>
-      </div>
-
-      {/* Refresh Status Messages */}
-      {refreshSuccess && (
-        <div className="refresh-notification success">
-          <span className="notification-icon">✅</span>
-          <span>Data refreshed successfully</span>
-          <button 
-            className="notification-close"
-            onClick={() => setRefreshSuccess(false)}
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {refreshError && (
-        <div className="refresh-notification error">
-          <span className="notification-icon">❌</span>
-          <span>{refreshError}</span>
-          <div className="notification-actions">
-            <button 
-              className="notification-retry"
-              onClick={handleRefreshRetry}
-              disabled={refreshing}
-            >
-              Retry
-            </button>
-            <button 
-              className="notification-close"
-              onClick={() => setRefreshError(null)}
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Error Recovery Status */}
-      {errorRecoveryStatus && (
-        <div className={`refresh-notification ${errorRecoveryStatus.type === 'recovering' ? 'info' : 'warning'}`}>
-          <span className="notification-icon">
-            {errorRecoveryStatus.type === 'recovering' ? '🔄' : '⚠️'}
-          </span>
-          <span>{errorRecoveryStatus.message}</span>
-          {errorRecoveryStatus.action && (
-            <div className="notification-actions">
-              <button 
-                className="notification-retry"
-                onClick={() => {
-                  if (errorRecoveryStatus.action === 'refresh_page') {
-                    window.location.reload();
-                  } else {
-                    reconnect();
-                  }
-                }}
-              >
-                {errorRecoveryStatus.action === 'refresh_page' ? 'Refresh Page' : 'Retry'}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      </div>
 
       {/* Results content */}
       <div className="results-content" id="main-content">
@@ -795,42 +614,7 @@ function Results() {
           <>
             {evaluations.length > 0 ? (
               <>
-                {/* Summary stats */}
-                <div className="results-summary">
-                  <div className="summary-stats">
-                    <div className="summary-stat" aria-label="Total evaluations across department">
-                      <div className="stat-icon">📊</div>
-                      <span className="stat-value">{evaluations.length}</span>
-                      <span className="stat-label">Total Evaluations</span>
-                    </div>
-                    <div className="summary-stat" aria-label="Active evaluations currently open">
-                      <div className="stat-icon">✅</div>
-                      <span className="stat-value">
-                        {evaluations.filter(e => e.status === 'Active').length}
-                      </span>
-                      <span className="stat-label">Active</span>
-                    </div>
-                    <div className="summary-stat" aria-label="Closed evaluations that are completed">
-                      <div className="stat-icon">🗂️</div>
-                      <span className="stat-value">
-                        {evaluations.filter(e => e.status === 'Closed').length}
-                      </span>
-                      <span className="stat-label">Closed</span>
-                    </div>
-                    <div className="summary-stat" aria-label="Average student participation across evaluations">
-                      <div className="stat-icon">📈</div>
-                      <span className="stat-value">
-                        {evaluations.length > 0
-                          ? Math.round(
-                              evaluations.reduce((sum, e) => sum + (e.participation?.participation_rate || 0), 0) /
-                              evaluations.length
-                            )
-                          : 0}%
-                      </span>
-                      <span className="stat-label">Avg Participation</span>
-                    </div>
-                  </div>
-                </div>
+
 
                 {/* Evaluations table */}
                 <div className="evaluations-table-container">
@@ -1055,8 +839,8 @@ function Results() {
                       <option value="course-desc">Course Z-A</option>
                       <option value="instructor-asc">Instructor A-Z</option>
                       <option value="instructor-desc">Instructor Z-A</option>
-                      <option value="participation-desc">Highest Participation</option>
-                      <option value="participation-asc">Lowest Participation</option>
+                      <option value="participation-desc">Highest Score</option>
+                      <option value="participation-asc">Lowest Score</option>
                       <option value="status-asc">Status</option>
                     </select>
                     <span id="sort-help" className="sr-only">
@@ -1064,16 +848,80 @@ function Results() {
                     </span>
                   </div>
 
-                  {/* Evaluations Cards Grid */}
-                  <div className="evaluations-cards-grid">
-                    {paginatedEvaluations.map((evaluation) => (
-                      <EvaluationCard
-                        key={evaluation.id}
-                        evaluation={evaluation}
-                        onViewResults={handleViewResults}
-                        getParticipationClass={getParticipationClass}
-                      />
-                    ))}
+                  {/* Evaluations List */}
+                  <div className="evaluations-list">
+                    {paginatedEvaluations.map((evaluation, index) => {
+                      const participationRate = evaluation.participation?.participation_rate || 0;
+                      const finalScore = evaluation.final_score || 
+                                       evaluation.weighted_scores?.weighted_score || 
+                                       participationRate;
+                      
+                      const getPerformanceLevel = () => {
+                        if (finalScore >= 85) return { text: 'Excellent', class: 'perf-excellent' };
+                        if (finalScore >= 70) return { text: 'Good', class: 'perf-good' };
+                        if (finalScore >= 55) return { text: 'Average', class: 'perf-average' };
+                        return { text: 'Poor', class: 'perf-poor' };
+                      };
+                      
+                      const performance = getPerformanceLevel();
+                      
+                      return (
+                        <div key={evaluation.id} className="evaluation-list-item">
+                          <div className="teacher-avatar-section">
+                            <div className="teacher-avatar">
+                              {evaluation.teacher?.name ?
+                                evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
+                                'UN'
+                              }
+                            </div>
+                          </div>
+                          
+                          <div className="teacher-name-section">
+                            <span className="teacher-name">
+                              {evaluation.teacher?.name || 'Unknown Teacher'}
+                            </span>
+                          </div>
+                          
+                          <div className="percentage-section">
+                            <span className="percentage-value">
+                              {evaluation.final_score ? 
+                                `${Math.round(evaluation.final_score)}%` : 
+                                evaluation.weighted_scores?.weighted_score ? 
+                                  `${Math.round(evaluation.weighted_scores.weighted_score)}%` :
+                                  participationRate > 0 ? `${Math.round(participationRate)}%` : '0%'
+                              }
+                            </span>
+                          </div>
+                          
+                          <div className="performance-section">
+                            <span className={`performance-badge ${performance.class}`}>
+                              {performance.text}
+                            </span>
+                          </div>
+                          
+                          <div className="responses-section">
+                            <span className="responses-count">
+                              {evaluation.participation?.total_responses || 0} responses
+                            </span>
+                          </div>
+                          
+                          <div className="date-section">
+                            <span className="date-value">
+                              {evaluation.opened_at ? new Date(evaluation.opened_at).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          <div className="action-section">
+                            <button
+                              className="see-detail-btn"
+                              onClick={() => handleViewResults(evaluation.id)}
+                            >
+                              See Detail
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Enhanced Pagination */}
@@ -1110,62 +958,10 @@ function Results() {
             )}
           </>
         )}
-
-        {/* Visual Analytics View */}
-        {activeView === 'analytics' && (
-          <div className="analytics-view">
-            <VisualAnalytics
-              departmentId={id}
-              chartTypes={['performance_distribution', 'participation_trends', 'teacher_comparison', 'rating_breakdown']}
-              height="400px"
-              showLegend={true}
-              showTooltips={true}
-              className="department-analytics"
-              onChartClick={(chartType, data) => {
-                console.log('Chart clicked:', chartType, data);
-                // Handle chart interactions
-              }}
-            />
-          </div>
-        )}
-
-        {/* Teacher Rankings View */}
-        {activeView === 'rankings' && (
-          <div className="rankings-view">
-            <TeacherRankings
-              departmentId={id}
-              sortBy="performance"
-              sortDirection="desc"
-              limit={50}
-              showInsights={true}
-              showComparison={true}
-              className="department-rankings"
-              onTeacherClick={(teacher) => {
-                console.log('Teacher clicked:', teacher);
-                // Handle teacher selection - could navigate to detailed view
-              }}
-            />
-          </div>
-        )}
-
-        {/* Performance Insights View */}
-        {activeView === 'insights' && (
-          <div className="insights-view">
-            <PerformanceInsights
-              departmentId={id}
-              includeTrends={true}
-              includeBenchmarking={true}
-              className="department-insights"
-              onInsightClick={(insight) => {
-                console.log('Insight clicked:', insight);
-                // Handle insight interactions
-              }}
-            />
-          </div>
-        )}
       </div>
-    </DepartmentResultsErrorManager>
-  </DepartmentResultsErrorBoundary>
+        </div>
+      </DepartmentResultsErrorManager>
+    </DepartmentResultsErrorBoundary>
   );
 }
 

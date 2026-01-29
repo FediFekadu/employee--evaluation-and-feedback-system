@@ -115,7 +115,13 @@ function TeacherFeedback() {
 
   const scoreBreakdownEntries = useMemo(() => {
     const bd = results?.score_breakdown || {};
-    return Object.keys(bd).map(key => ({ key, ...bd[key] }));
+    // Map backend keys to user-friendly labels, preserve original key for data access
+    const labelMap = {
+      student: 'Student Evaluation',
+      peer: 'Teachers Evaluation',
+      admin: 'Head of Department (HOD) Evaluation'
+    };
+    return Object.keys(bd).map(key => ({ key, label: labelMap[key] || key, ...bd[key] }));
   }, [results]);
 
   const sampleComments = useMemo(() => {
@@ -180,22 +186,36 @@ function TeacherFeedback() {
                       <p style={{ color: 'var(--muted)' }}>No breakdown available.</p>
                     )}
                     {scoreBreakdownEntries.length > 0 && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                        {scoreBreakdownEntries.map(item => (
-                          <div key={item.key} style={{ padding: 16, border: '1px solid #eee', borderRadius: 12 }}>
-                            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{item.key}</div>
-                            <div style={{ fontSize: 18, fontWeight: 600 }}>{Math.round(item.weighted_value || item.average || 0)}</div>
-                            {typeof item.weight !== 'undefined' && (
-                              (() => {
-                                const raw = Number(item.weight) || 0;
-                                const pct = raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
-                                return (
-                                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Weight: {pct}%</div>
-                                );
-                              })()
-                            )}
-                          </div>
-                        ))}
+                      <div style={{ border: '1px solid #eee', borderRadius: 12, overflow: 'hidden' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', background: '#fafafa', borderBottom: '1px solid #eee' }}>
+                          <div style={{ padding: 12, fontSize: 12, color: 'var(--muted)' }}>Evaluation Type</div>
+                          <div style={{ padding: 12, fontSize: 12, color: 'var(--muted)' }}>Raw Score</div>
+                          <div style={{ padding: 12, fontSize: 12, color: 'var(--muted)' }}>Weight</div>
+                          <div style={{ padding: 12, fontSize: 12, color: 'var(--muted)' }}>Weighted Value</div>
+                        </div>
+                        {scoreBreakdownEntries.map((item) => {
+                          const rawScore = typeof item.raw_score === 'number' ? Math.round(item.raw_score) : 0;
+                          const weightPct = (() => {
+                            const w = Number(item.weight) || 0;
+                            return w <= 1 ? Math.round(w * 100) : Math.round(w);
+                          })();
+                          const weightedVal = typeof item.weighted_value === 'number' ? Math.round(item.weighted_value) : 0;
+                          return (
+                            <div key={item.key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', borderBottom: '1px solid #eee' }}>
+                              <div style={{ padding: 12 }}>{item.label}</div>
+                              <div style={{ padding: 12 }}>{rawScore}%</div>
+                              <div style={{ padding: 12 }}>{weightPct}%</div>
+                              <div style={{ padding: 12 }}>{weightedVal}%</div>
+                            </div>
+                          );
+                        })}
+                        {/* Final score row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', background: '#fafafa' }}>
+                          <div style={{ padding: 12, fontWeight: 600 }}>Final Score</div>
+                          <div style={{ padding: 12 }}>—</div>
+                          <div style={{ padding: 12, fontWeight: 600 }}>100%</div>
+                          <div style={{ padding: 12, fontWeight: 600 }}>{Math.round(results.final_score || 0)}%</div>
+                        </div>
                       </div>
                     )}
                   </div>

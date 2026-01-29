@@ -237,6 +237,13 @@ function TeacherHome() {
               color="#10b981"
             />
             <QuickActionCard
+              title="Peer Evaluations"
+              description="Evaluate assigned peers"
+              to="/teacher/peer-evaluations"
+              icon="👥"
+              color="#ef4444"
+            />
+            <QuickActionCard
               title="Update Profile"
               description="Manage your information"
               to="/teacher/profile"

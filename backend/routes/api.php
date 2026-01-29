@@ -9,6 +9,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\HodEvaluationController;
+use App\Http\Controllers\PeerEvaluationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +83,7 @@ Route::get('/departments', [DepartmentController::class, 'index']);
 Route::get('/departments/{department}', [DepartmentController::class, 'show']);
 Route::get('/departments/{department}/evaluation-results', [DepartmentController::class, 'evaluationResults']);
 Route::get('/departments/{department}/evaluation-results/poll', [DepartmentController::class, 'pollEvaluationResults']);
+Route::get('/departments/{department}/teachers/{teacherId}/course-ratings', [DepartmentController::class, 'teacherCourseRatings']);
 Route::get('/departments/{department}/analytics', [DepartmentController::class, 'analytics']);
 Route::get('/departments/{department}/reports', [DepartmentController::class, 'reports'])
     ->middleware('throttle:analytics');
@@ -109,6 +112,17 @@ Route::get('/evaluations/{evaluation}/peer-template-questions', [App\Http\Contro
 // HOD Template routes
 Route::get('/departments/{department}/hod-template', [App\Http\Controllers\HodTemplateController::class, 'getTemplate']);
 Route::put('/departments/{department}/hod-template', [App\Http\Controllers\HodTemplateController::class, 'updateTemplate']);
+
+// HOD Evaluations
+Route::get('/departments/{department}/hod-evaluations', [HodEvaluationController::class, 'index']);
+Route::post('/hod-evaluations/{hodEvaluation}/score', [HodEvaluationController::class, 'setScore'])->middleware('role:hod,department_admin');
+
+// Peer Evaluations
+Route::get('/peer-evaluations/{peerEvaluation}', [PeerEvaluationController::class, 'show']);
+Route::get('/peer-evaluations/{peerEvaluation}/questions', [PeerEvaluationController::class, 'questions']);
+Route::post('/peer-evaluations/{peerEvaluation}/responses', [PeerEvaluationController::class, 'submitResponses']);
+// List released/assigned peer evaluations for a teacher
+Route::get('/teachers/{teacher}/peer-evaluations', [PeerEvaluationController::class, 'listAssigned']);
 
 // Department admins management
 Route::get('/department-admins', [DepartmentController::class, 'listAdmins']);

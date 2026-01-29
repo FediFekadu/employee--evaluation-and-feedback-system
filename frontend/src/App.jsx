@@ -28,6 +28,8 @@ import TeacherHome from './pages/dashboards/Teacher/Home';
 import TeacherCourses from './pages/dashboards/Teacher/Courses';
 import TeacherFeedback from './pages/dashboards/Teacher/Feedback';
 import TeacherProfile from './pages/dashboards/Teacher/Profile';
+import TeacherPeerEvaluation from './pages/dashboards/Teacher/PeerEvaluation';
+import TeacherPeerEvaluationsList from './pages/dashboards/Teacher/PeerEvaluationsList';
 // Department dashboard nested
 import DepartmentLayout from './pages/dashboards/Department/Layout';
 import DepartmentOverview from './pages/dashboards/Department/Overview';
@@ -38,7 +40,8 @@ import DepartmentEvaluations from './pages/dashboards/Department/Evaluations';
 import DepartmentResults from './pages/dashboards/Department/Results';
 import DepartmentEvaluationResults from './pages/dashboards/Department/EvaluationResults';
 import DepartmentReports from './pages/dashboards/Department/Reports';
-import DepartmentManageEvaluations from './pages/dashboards/Department/ManageEvaluations';
+import DepartmentOpenEvaluations from './pages/dashboards/Department/openEvaluations';
+import HodEvaluations from './pages/dashboards/Department/HodEvaluations';
 import { DepartmentRouteGuard } from './components/RouteGuard';
 
 // Wrapper components for protected routes
@@ -224,6 +227,8 @@ function App() {
               <Route index element={<TeacherHome />} />
               <Route path="courses" element={<TeacherCourses />} />
               <Route path="feedback" element={<TeacherFeedback />} />
+              <Route path="peer-evaluations" element={<TeacherPeerEvaluationsList />} />
+              <Route path="peer-evaluations/:peerEvaluationId" element={<TeacherPeerEvaluation />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
             {/* Department dashboard */}
@@ -233,7 +238,8 @@ function App() {
               <Route path="instructors" element={<DepartmentInstructors />} />
               <Route path="students" element={<DepartmentStudents />} />
               <Route path="evaluations" element={<DepartmentEvaluations />} />
-              <Route path="manage-evaluations" element={<DepartmentManageEvaluations />} />
+              <Route path="hod-evaluations" element={<HodEvaluations />} />
+              <Route path="manage-evaluations" element={<DepartmentOpenEvaluations />} />
               <Route path="results" element={<DepartmentResultsWrapper />} />
               <Route path="results/:evaluationId" element={<DepartmentEvaluationResultsWrapper />} />
               <Route path="reports" element={<DepartmentReports />} />

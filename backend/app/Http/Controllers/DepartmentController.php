@@ -184,9 +184,30 @@ class DepartmentController extends Controller
 
             // Enhance evaluations with participation metrics and weighted scores
             $evaluations->getCollection()->transform(function ($evaluation) {
-                $totalResponses = $evaluation->feedbacks->count();
+                // Count responses from all evaluation types (student, peer, HOD)
+                $studentResponses = $evaluation->feedbacks->count();
+                
+                // Count peer evaluation responses for this teacher/semester
+                $peerResponses = \App\Models\PeerEvaluationResponse::whereHas('peerEvaluation', function($query) use ($evaluation) {
+                    $query->where('department_id', $evaluation->department_id ?? $evaluation->course?->department_id)
+                          ->where('teacher_id', $evaluation->teacher_id)
+                          ->where('academic_year', $evaluation->academic_year)
+                          ->where('semester', $evaluation->semester);
+                })->count();
+                
+                // Count HOD evaluation responses for this teacher/semester
+                $hodResponses = \App\Models\HodEvaluation::where('department_id', $evaluation->department_id ?? $evaluation->course?->department_id)
+                    ->where('teacher_id', $evaluation->teacher_id)
+                    ->where('academic_year', $evaluation->academic_year)
+                    ->where('semester', $evaluation->semester)
+                    ->whereNotNull('score')
+                    ->count();
+                
+                // Total responses across all actors (students, peers, HOD)
+                $totalResponses = $studentResponses + $peerResponses + $hodResponses;
+                
                 $expectedResponses = $evaluation->course->enrolled_students ?? 0;
-                $participationRate = $expectedResponses > 0 ? ($totalResponses / $expectedResponses) * 100 : 0;
+                $participationRate = $expectedResponses > 0 ? ($studentResponses / $expectedResponses) * 100 : 0;
                 
                 // Determine data quality
                 $dataQuality = 'Limited';
@@ -423,7 +444,26 @@ class DepartmentController extends Controller
             $closedEvaluations = $evaluations->whereNotNull('closed_at')->count();
             
             $totalResponses = $evaluations->sum(function($eval) {
-                return $eval->feedbacks->count();
+                // Count responses from all evaluation types (student, peer, HOD)
+                $studentResponses = $eval->feedbacks->count();
+                
+                // Count peer evaluation responses for this teacher/semester
+                $peerResponses = \App\Models\PeerEvaluationResponse::whereHas('peerEvaluation', function($query) use ($eval) {
+                    $query->where('department_id', $eval->department_id ?? $eval->course?->department_id)
+                          ->where('teacher_id', $eval->teacher_id)
+                          ->where('academic_year', $eval->academic_year)
+                          ->where('semester', $eval->semester);
+                })->count();
+                
+                // Count HOD evaluation responses for this teacher/semester
+                $hodResponses = \App\Models\HodEvaluation::where('department_id', $eval->department_id ?? $eval->course?->department_id)
+                    ->where('teacher_id', $eval->teacher_id)
+                    ->where('academic_year', $eval->academic_year)
+                    ->where('semester', $eval->semester)
+                    ->whereNotNull('score')
+                    ->count();
+                
+                return $studentResponses + $peerResponses + $hodResponses;
             });
             
             $averageParticipation = $evaluations->avg(function($eval) {
@@ -437,7 +477,26 @@ class DepartmentController extends Controller
                 return $eval->created_at->format('Y-m');
             })->map(function($monthEvals) {
                 $monthlyResponses = $monthEvals->sum(function($eval) {
-                    return $eval->feedbacks->count();
+                    // Count responses from all evaluation types (student, peer, HOD)
+                    $studentResponses = $eval->feedbacks->count();
+                    
+                    // Count peer evaluation responses for this teacher/semester
+                    $peerResponses = \App\Models\PeerEvaluationResponse::whereHas('peerEvaluation', function($query) use ($eval) {
+                        $query->where('department_id', $eval->department_id ?? $eval->course?->department_id)
+                              ->where('teacher_id', $eval->teacher_id)
+                              ->where('academic_year', $eval->academic_year)
+                              ->where('semester', $eval->semester);
+                    })->count();
+                    
+                    // Count HOD evaluation responses for this teacher/semester
+                    $hodResponses = \App\Models\HodEvaluation::where('department_id', $eval->department_id ?? $eval->course?->department_id)
+                        ->where('teacher_id', $eval->teacher_id)
+                        ->where('academic_year', $eval->academic_year)
+                        ->where('semester', $eval->semester)
+                        ->whereNotNull('score')
+                        ->count();
+                    
+                    return $studentResponses + $peerResponses + $hodResponses;
                 });
                 $monthlyExpected = $monthEvals->sum(function($eval) {
                     return $eval->course->enrolled_students ?? 0;
@@ -675,6 +734,137 @@ class DepartmentController extends Controller
     }
 
 
+
+    /**
+     * Get course-wise rating distribution for a teacher
+     */
+    public function teacherCourseRatings(Request $request, Department $department, $teacherId)
+    {
+        try {
+            $data = $request->validate([
+                'academic_year' => 'nullable|string',
+                'semester' => 'nullable|string',
+            ]);
+
+            // Get all evaluations for this teacher in the department
+            $evaluationsQuery = \App\Models\Evaluation::whereHas('course', function($query) use ($department) {
+                $query->where('department_id', $department->id);
+            })->where('teacher_id', $teacherId)
+              ->with(['course', 'teacher', 'feedbacks.responses']);
+
+            // Apply filters if provided
+            if (!empty($data['academic_year'])) {
+                $evaluationsQuery->where('academic_year', $data['academic_year']);
+            }
+            
+            if (!empty($data['semester'])) {
+                $evaluationsQuery->where('semester', $data['semester']);
+            }
+
+            $evaluations = $evaluationsQuery->get();
+
+            if ($evaluations->isEmpty()) {
+                return response()->json([
+                    'message' => 'No evaluations found for this teacher.',
+                    'data' => []
+                ], 404);
+            }
+
+            $courseRatings = [];
+            
+            foreach ($evaluations as $evaluation) {
+                $courseKey = $evaluation->course->id;
+                
+                if (!isset($courseRatings[$courseKey])) {
+                    $courseRatings[$courseKey] = [
+                        'course_id' => $evaluation->course->id,
+                        'course_title' => $evaluation->course->title,
+                        'course_code' => $evaluation->course->code,
+                        'academic_year' => $evaluation->academic_year,
+                        'semester' => $evaluation->semester,
+                        'year_level' => $evaluation->year_level,
+                        'rating_distribution' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0],
+                        'total_responses' => 0,
+                        'average_rating' => 0,
+                        'final_score' => 0
+                    ];
+                }
+
+                // Get all responses for this evaluation
+                $responses = \App\Models\Response::whereHas('feedback', function ($query) use ($evaluation) {
+                    $query->where('evaluation_id', $evaluation->id);
+                })->whereNotNull('rating')
+                  ->whereBetween('rating', [1, 5])
+                  ->get();
+
+                // Count rating distribution
+                foreach ($responses as $response) {
+                    $rating = (int) $response->rating;
+                    $courseRatings[$courseKey]['rating_distribution'][$rating]++;
+                    $courseRatings[$courseKey]['total_responses']++;
+                }
+
+                // Calculate average rating for this course
+                if ($courseRatings[$courseKey]['total_responses'] > 0) {
+                    $totalRatingSum = 0;
+                    foreach ($courseRatings[$courseKey]['rating_distribution'] as $rating => $count) {
+                        $totalRatingSum += $rating * $count;
+                    }
+                    $courseRatings[$courseKey]['average_rating'] = round($totalRatingSum / $courseRatings[$courseKey]['total_responses'], 2);
+                    $courseRatings[$courseKey]['final_score'] = round(($courseRatings[$courseKey]['average_rating'] / 5) * 100, 1);
+                }
+
+                // Convert counts to percentages
+                $total = $courseRatings[$courseKey]['total_responses'];
+                if ($total > 0) {
+                    foreach ($courseRatings[$courseKey]['rating_distribution'] as $rating => $count) {
+                        $courseRatings[$courseKey]['rating_distribution'][$rating] = [
+                            'count' => $count,
+                            'percentage' => round(($count / $total) * 100, 1)
+                        ];
+                    }
+                }
+            }
+
+            // Get teacher information
+            $teacher = \App\Models\Teacher::find($teacherId);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'teacher' => [
+                        'id' => $teacher->id,
+                        'name' => $teacher->name,
+                        'email' => $teacher->email ?? null,
+                    ],
+                    'department' => [
+                        'id' => $department->id,
+                        'name' => $department->name,
+                    ],
+                    'filters' => [
+                        'academic_year' => $data['academic_year'] ?? 'All',
+                        'semester' => $data['semester'] ?? 'All',
+                    ],
+                    'courses' => array_values($courseRatings),
+                    'total_courses' => count($courseRatings),
+                    'generated_at' => now()->toISOString(),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to load teacher course ratings', [
+                'department_id' => $department->id,
+                'teacher_id' => $teacherId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load course ratings for this teacher.',
+                'error' => 'teacher_course_ratings_failed'
+            ], 500);
+        }
+    }
 
     /**
      * Get content type for export format

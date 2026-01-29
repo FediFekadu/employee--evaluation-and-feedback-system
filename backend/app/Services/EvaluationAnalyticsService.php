@@ -8,6 +8,9 @@ use App\Models\Feedback;
 use App\Models\Response;
 use App\Models\Student;
 use App\Models\EvaluationSubmission;
+use App\Models\PeerEvaluationResponse;
+use App\Models\HodEvaluation;
+use App\Services\ScoringService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -53,44 +56,22 @@ class EvaluationAnalyticsService
         $cacheKey = "weighted_scores_{$evaluationId}";
         
         return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($evaluationId) {
+            // Ensure evaluation exists for context
             $evaluation = Evaluation::with(['course', 'teacher'])->findOrFail($evaluationId);
-            
-            // Calculate Student Evaluation Score (50% weight)
-            $studentScore = $this->calculateStudentEvaluationScore($evaluationId);
-            
-            // Calculate Peer Evaluation Score (30% weight)
-            $peerScore = $this->calculatePeerEvaluationScore($evaluationId);
-            
-            // Calculate Admin/Boss Evaluation Score (20% weight)
-            $adminScore = $this->calculateAdminEvaluationScore($evaluationId);
-            
-            // Calculate weighted final score
-            $weightedScore = ($studentScore * self::STUDENT_WEIGHT) + 
-                           ($peerScore * self::PEER_WEIGHT) + 
-                           ($adminScore * self::ADMIN_WEIGHT);
+
+            // Delegate weighted scoring to ScoringService for consistency
+            $scoringService = app(ScoringService::class);
+            $scores = $scoringService->calculateWeightedScores($evaluationId);
+
+            // Compose response to maintain existing structure and add performance level
+            $weightedScore = $scores['weighted_score'];
 
             return [
-                'student_score' => round($studentScore, 2),
-                'peer_score' => round($peerScore, 2),
-                'admin_score' => round($adminScore, 2),
-                'weighted_score' => round($weightedScore, 2),
-                'breakdown' => [
-                    'student' => [
-                        'raw_score' => $studentScore,
-                        'weight' => self::STUDENT_WEIGHT * 100,
-                        'weighted_value' => round($studentScore * self::STUDENT_WEIGHT, 2)
-                    ],
-                    'peer' => [
-                        'raw_score' => $peerScore,
-                        'weight' => self::PEER_WEIGHT * 100,
-                        'weighted_value' => round($peerScore * self::PEER_WEIGHT, 2)
-                    ],
-                    'admin' => [
-                        'raw_score' => $adminScore,
-                        'weight' => self::ADMIN_WEIGHT * 100,
-                        'weighted_value' => round($adminScore * self::ADMIN_WEIGHT, 2)
-                    ]
-                ],
+                'student_score' => $scores['student_score'],
+                'peer_score' => $scores['peer_score'],
+                'admin_score' => $scores['admin_score'],
+                'weighted_score' => $scores['weighted_score'],
+                'breakdown' => $scores['breakdown'],
                 'performance_level' => $this->getPerformanceLevel($weightedScore),
                 'calculated_at' => now()->toISOString()
             ];
@@ -555,6 +536,31 @@ class EvaluationAnalyticsService
                 ? ($averageRating / $maxPossibleRating) * 100 
                 : 0;
 
+            // Get evaluation details for counting all response types
+            $evaluation = Evaluation::findOrFail($evaluationId);
+            
+            // Count responses from all evaluation types (student, peer, HOD)
+            $studentResponseCount = $responses->count();
+            
+            // Count peer evaluation responses for this teacher/semester
+            $peerResponseCount = \App\Models\PeerEvaluationResponse::whereHas('peerEvaluation', function($query) use ($evaluation) {
+                $query->where('department_id', $evaluation->department_id ?? $evaluation->course?->department_id)
+                      ->where('teacher_id', $evaluation->teacher_id)
+                      ->where('academic_year', $evaluation->academic_year)
+                      ->where('semester', $evaluation->semester);
+            })->count();
+            
+            // Count HOD evaluation responses for this teacher/semester
+            $hodResponseCount = \App\Models\HodEvaluation::where('department_id', $evaluation->department_id ?? $evaluation->course?->department_id)
+                ->where('teacher_id', $evaluation->teacher_id)
+                ->where('academic_year', $evaluation->academic_year)
+                ->where('semester', $evaluation->semester)
+                ->whereNotNull('score')
+                ->count();
+            
+            // Total responses across all actors (students, peers, HOD)
+            $totalAllResponses = $studentResponseCount + $peerResponseCount + $hodResponseCount;
+
             return [
                 'evaluation_id' => $evaluationId,
                 'average_rating' => round($averageRating, 2),
@@ -562,7 +568,10 @@ class EvaluationAnalyticsService
                 'weighted_scores' => $weightedScores,
                 'participation' => $participationData,
                 'rating_distribution' => $ratingDistribution,
-                'total_responses' => $responses->count(),
+                'total_responses' => $totalAllResponses, // Updated to include all response types
+                'student_responses' => $studentResponseCount, // Keep student-only count for reference
+                'peer_responses' => $peerResponseCount,
+                'hod_responses' => $hodResponseCount,
                 'total_raw_responses' => $allResponses->count(),
                 'excluded_responses' => $allResponses->count() - $responses->count(),
                 'calculated_at' => Carbon::now(),

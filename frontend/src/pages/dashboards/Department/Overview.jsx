@@ -112,6 +112,14 @@ function DepartmentOverview() {
       badge: evaluations.filter(e => !e.closed_at).length || null
     },
     {
+      title: 'HOD Evaluations',
+      description: 'Record HOD scores for teachers',
+      icon: '👨‍💼',
+      color: '#6366f1',
+      link: `/department/${id}/hod-evaluations`,
+      badge: null
+    },
+    {
       title: 'Manage Courses',
       description: 'View and edit courses',
       icon: '📚',

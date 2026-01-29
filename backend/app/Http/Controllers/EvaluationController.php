@@ -8,6 +8,7 @@ use App\Services\SubmissionValidationService;
 use App\Services\EvaluationAnalyticsService;
 use App\Services\ReportGenerationService;
 use App\Services\NotificationService;
+use App\Services\PeerHodEvaluationService;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -129,6 +130,17 @@ class EvaluationController extends Controller
         // Load the course relationship
         $evaluation->load('course');
         
+        // Initialize peer & HOD evaluations for this teacher/semester
+        try {
+            app(PeerHodEvaluationService::class)->initializeForEvaluation($evaluation->load('course'));
+        } catch (\Throwable $e) {
+            // Don't block creation; log and move on
+            \Log::warning('Peer/HOD initialization failed', [
+                'evaluation_id' => $evaluation->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
         // Note: Real-time broadcasting has been removed
         
         return response()->json($evaluation, 201);
@@ -164,6 +176,16 @@ class EvaluationController extends Controller
         }
         
         $evaluation->update($data);
+
+        // If opened_at present, ensure peer/HOD evaluations are initialized/kept in sync
+        try {
+            app(PeerHodEvaluationService::class)->initializeForEvaluation($evaluation->load('course'));
+        } catch (\Throwable $e) {
+            \Log::warning('Peer/HOD initialization on update failed', [
+                'evaluation_id' => $evaluation->id,
+                'error' => $e->getMessage()
+            ]);
+        }
         
         // Note: Real-time broadcasting has been removed
         
@@ -425,6 +447,7 @@ class EvaluationController extends Controller
                 ],
                 'instructor_information' => [
                     'name' => $comprehensiveResults['evaluation_info']['instructor'],
+                    'teacher_id' => $evaluation->teacher_id,
                     'session' => $comprehensiveResults['evaluation_info']['academic_year'] . ' - ' . $comprehensiveResults['evaluation_info']['semester'],
                     'status' => $comprehensiveResults['evaluation_info']['status'],
                 ],

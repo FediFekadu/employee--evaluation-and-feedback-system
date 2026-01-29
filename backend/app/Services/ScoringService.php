@@ -6,6 +6,9 @@ use App\Models\Evaluation;
 use App\Models\Response;
 use App\Models\Feedback;
 use App\Models\EvaluationSubmission;
+use App\Models\PeerEvaluation;
+use App\Models\PeerEvaluationResponse;
+use App\Models\HodEvaluation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -128,19 +131,33 @@ class ScoringService
      */
     public function calculatePeerEvaluationScore(int $evaluationId): float
     {
-        // TODO: Implement peer evaluation system when peer evaluation tables are created
-        // For now, return a placeholder score based on student evaluation with variation
-        
-        $studentScore = $this->calculateStudentEvaluationScore($evaluationId);
-        
-        // Apply slight variation to simulate peer evaluation
-        // In production, this would query actual peer evaluation data
-        $peerScore = max(0, min(100, $studentScore + rand(-5, 5)));
-        
+        $evaluation = Evaluation::findOrFail($evaluationId);
+
+        // Locate peer evaluation for this teacher and semester
+        $peerEval = PeerEvaluation::where('department_id', $evaluation->department_id ?? $evaluation->course?->department_id)
+            ->where('teacher_id', $evaluation->teacher_id)
+            ->where('academic_year', $evaluation->academic_year)
+            ->where('semester', $evaluation->semester)
+            ->first();
+
+        if (!$peerEval) {
+            Log::info("No peer evaluation initialized for evaluation {$evaluationId}");
+            return 0.0;
+        }
+
+        // Aggregate peer responses scores for this peer evaluation
+        $submittedResponses = PeerEvaluationResponse::where('peer_evaluation_id', $peerEval->id)
+            ->whereNotNull('score')
+            ->get(['score']);
+
+        if ($submittedResponses->isEmpty()) {
+            Log::info("No peer responses submitted for peer evaluation {$peerEval->id}");
+            return 0.0;
+        }
+
+        // Average of percentage scores (0-100) recorded per peer evaluator
+        $peerScore = (float) $submittedResponses->avg('score');
         $this->validateScoreRange($peerScore, 'peer');
-        
-        Log::info("Using placeholder peer score for evaluation {$evaluationId}: {$peerScore}");
-        
         return $peerScore;
     }
 
@@ -153,19 +170,22 @@ class ScoringService
      */
     public function calculateAdminEvaluationScore(int $evaluationId): float
     {
-        // TODO: Implement admin evaluation system when admin evaluation tables are created
-        // For now, return a placeholder score based on student evaluation with variation
-        
-        $studentScore = $this->calculateStudentEvaluationScore($evaluationId);
-        
-        // Apply slight variation to simulate admin evaluation
-        // In production, this would query actual admin evaluation data
-        $adminScore = max(0, min(100, $studentScore + rand(-3, 7)));
-        
+        $evaluation = Evaluation::findOrFail($evaluationId);
+
+        // Find HOD evaluation record for the teacher/semester
+        $hodEval = HodEvaluation::where('department_id', $evaluation->department_id ?? $evaluation->course?->department_id)
+            ->where('teacher_id', $evaluation->teacher_id)
+            ->where('academic_year', $evaluation->academic_year)
+            ->where('semester', $evaluation->semester)
+            ->first();
+
+        if (!$hodEval || $hodEval->score === null) {
+            Log::info("No HOD score for evaluation {$evaluationId}");
+            return 0.0;
+        }
+
+        $adminScore = max(0, min(100, (float) $hodEval->score));
         $this->validateScoreRange($adminScore, 'admin');
-        
-        Log::info("Using placeholder admin score for evaluation {$evaluationId}: {$adminScore}");
-        
         return $adminScore;
     }
 

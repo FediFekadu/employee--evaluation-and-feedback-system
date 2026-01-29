@@ -38,6 +38,9 @@ export { default as ExportNotification } from './ExportNotification';
 export { default as VisualAnalytics } from './VisualAnalytics';
 export { default as TeacherRankings } from './TeacherRankings';
 export { default as PerformanceInsights } from './PerformanceInsights';
+export { default as ModernCircularProgress } from './ModernCircularProgress';
+export { default as StatisticsOverview } from './StatisticsOverview';
+export { default as EvaluationStatisticsOverview } from './EvaluationStatisticsOverview';
 
 // Interactive Analytics Components
 export { default as InteractiveVisualAnalytics } from './InteractiveVisualAnalytics';

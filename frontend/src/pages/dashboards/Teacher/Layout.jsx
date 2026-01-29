@@ -39,6 +39,7 @@ function TeacherLayout() {
     { to: '/teacher', label: 'Home', icon: '🏠' },
     { to: '/teacher/courses', label: 'My Courses', icon: '📚' },
     { to: '/teacher/feedback', label: 'Feedback', icon: '📊' },
+    { to: '/teacher/peer-evaluations', label: 'Peer Evaluations', icon: '👥' },
     { to: '/teacher/profile', label: 'Profile', icon: '👤' }
   ];
 

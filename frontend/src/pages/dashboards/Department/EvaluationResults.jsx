@@ -7,9 +7,9 @@ import DepartmentResultsErrorBoundary from '../../../components/ErrorHandling/De
 import DepartmentResultsErrorManager from '../../../components/ErrorHandling/DepartmentResultsErrorManager';
 import ResultsPageFallback from '../../../components/ErrorHandling/ResultsPageFallback';
 import StatusBadge from '../../../components/StatusBadge';
-import ParticipationIndicator from '../../../components/ParticipationIndicator';
 import ExportControls from '../../../components/ExportControls';
 import ExportNotification from '../../../components/ExportNotification';
+import ModernCircularProgress from '../../../components/ModernCircularProgress';
 import { useExport } from '../../../hooks/useExport';
 import { useErrorHandling } from '../../../hooks/useErrorHandling';
 import { useDepartmentAdminAccess } from '../../../hooks/useAccessControl';
@@ -30,6 +30,17 @@ function EvaluationResults() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [criticalError, setCriticalError] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  
+  // Course ratings modal state
+  const [showCourseRatings, setShowCourseRatings] = useState(false);
+  const [courseRatings, setCourseRatings] = useState(null);
+  const [courseRatingsLoading, setCourseRatingsLoading] = useState(false);
+  const [courseRatingsError, setCourseRatingsError] = useState(null);
+  
+  // Individual course detail modal state
+  const [showCourseDetail, setShowCourseDetail] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
   
   // Export functionality using the useExport hook
   const {
@@ -80,13 +91,64 @@ function EvaluationResults() {
       }
     } finally {
       setLoading(false);
+      setLastRefresh(new Date().toISOString());
     }
   };
 
-  // Handle retry for errors
-  const handleRetry = () => {
-    setError(null);
-    loadEvaluationResults();
+  // Load course ratings for teacher
+  const loadCourseRatings = async () => {
+    if (!evaluationResults?.instructor_information?.teacher_id) {
+      setCourseRatingsError('Teacher information not available');
+      return;
+    }
+
+    try {
+      setCourseRatingsLoading(true);
+      setCourseRatingsError(null);
+      
+      const response = await handleApiCall(
+        () => api.get(`/departments/${departmentId}/teachers/${evaluationResults.instructor_information.teacher_id}/course-ratings`, {
+          params: {
+            academic_year: evaluationResults.academic_year,
+            semester: evaluationResults.semester
+          }
+        }),
+        'course_ratings_load'
+      );
+      
+      setCourseRatings(response.data);
+    } catch (err) {
+      console.error('Failed to load course ratings:', err);
+      setCourseRatingsError('Failed to load course ratings. Please try again.');
+      addError(err, 'course_ratings_load');
+    } finally {
+      setCourseRatingsLoading(false);
+    }
+  };
+
+  // Handle view course ratings
+  const handleViewCourseRatings = () => {
+    setShowCourseRatings(true);
+    loadCourseRatings();
+  };
+
+  // Handle close course ratings modal
+  const handleCloseCourseRatings = () => {
+    setShowCourseRatings(false);
+    setCourseRatings(null);
+    setCourseRatingsError(null);
+  };
+
+  // Handle view individual course detail
+  const handleViewCourseDetail = (course) => {
+    setSelectedCourse(course);
+    setShowCourseDetail(true);
+  };
+
+  // Handle close course detail modal
+  const handleCloseCourseDetail = () => {
+    setShowCourseDetail(false);
+    setSelectedCourse(null);
   };
 
   // Handle back navigation
@@ -143,42 +205,11 @@ function EvaluationResults() {
   // Dismiss export notification (now handled by useExport hook)
   const dismissExportNotification = clearExportNotification;
 
-  // Helper function to get data quality class
-  const getDataQualityClass = (quality) => {
-    switch (quality?.toLowerCase()) {
-      case 'excellent': return 'quality-excellent';
-      case 'good': return 'quality-good';
-      case 'limited': return 'quality-limited';
-      default: return 'quality-unknown';
-    }
-  };
-
   // Format a weight that may be provided as ratio (0-1) or percentage (>1)
   const formatWeightPct = (w) => {
     const num = Number(w) || 0;
     return num <= 1 ? Math.round(num * 100) : Math.round(num);
   };
-
-  // Compute rating distribution compatible with multiple backend shapes
-  const ratingDistribution = (() => {
-    const dist = evaluationResults?.participation_analysis?.rating_distribution ||
-                 evaluationResults?.response_statistics?.rating_distribution || {};
-    const entries = Object.entries(dist);
-    if (entries.length === 0) return [];
-    const mapped = entries
-      .map(([rating, value]) => {
-        const count = typeof value === 'object' && value !== null ? Number(value.count || 0) : Number(value || 0);
-        const percent = typeof value === 'object' && value !== null ? Number(value.percentage || 0) : 0;
-        return { rating: Number(rating), count, percent };
-      })
-      .sort((a, b) => a.rating - b.rating);
-    // If percentage not supplied, compute from totals
-    const total = mapped.reduce((sum, r) => sum + (r.count || 0), 0);
-    return mapped.map(r => ({
-      ...r,
-      percent: r.percent || (total > 0 ? Math.round((r.count / total) * 100) : 0)
-    }));
-  })();
 
   // Critical error fallback (shows fallback UI)
   if (criticalError) {
@@ -246,80 +277,82 @@ function EvaluationResults() {
             autoHideDelay={5000}
           />
       
-          {/* Header with breadcrumb */}
-          <div className="dashboard-header">
-        <div>
-          <div className="breadcrumb-nav">
-            <button 
-              className="breadcrumb-link"
-              onClick={handleBack}
-              aria-label="Go back to results list"
-            >
-              ← Results
-            </button>
-            <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">Evaluation Details</span>
+          {/* Enhanced Professional Header */}
+          <div className="evaluation-results-header">
+            <div className="header-background">
+              <div className="header-gradient"></div>
+              <div className="header-pattern"></div>
+            </div>
+            
+            <div className="header-content">
+              <div className="header-main">
+                <div className="header-title-section">
+                  <div className="title-with-icon">
+                    <div className="title-icon">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 11H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2M9 11V9a2 2 0 1 1 4 0v2M9 11h6"/>
+                      </svg>
+                    </div>
+                    <div className="title-content">
+                      <h1 className="page-title">Evaluation Results</h1>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="header-actions">
+                <div className="action-group">
+                  <div className="action-buttons">
+                    <button 
+                      className="action-btn refresh-btn"
+                      onClick={loadEvaluationResults}
+                      disabled={loading}
+                      title="Refresh evaluation data"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                        <path d="M3 21v-5h5"/>
+                      </svg>
+                      {loading ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                    
+                    <button 
+                      className="action-btn primary-btn"
+                      onClick={handleBack}
+                      title="Return to results overview"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+                        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                      Back to Results
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <h1>Evaluation Results</h1>
-          <p>Detailed analytics for {evaluationResults?.course_information?.course}</p>
-        </div>
-        <div className="header-actions">
-          <button 
-            className="dept-btn dept-btn-ghost"
-            onClick={loadEvaluationResults}
-            disabled={loading}
-          >
-            {loading ? <LoadingSpinner size="small" /> : 'Refresh Data'}
-          </button>
-          <button 
-            className="dept-btn dept-btn-primary"
-            onClick={handleBack}
-          >
-            Back to Results
-          </button>
-        </div>
-      </div>
 
       {/* Results content */}
       <div className="evaluation-results-content" id="main-content">
         {evaluationResults ? (
           <>
-            {/* Course Information Section */}
-            <div className="results-section">
-              <h3>📚 Course Information</h3>
-              <div className="info-grid">
-                <div className="info-card">
-                  <div className="info-label">Course Name</div>
-                  <div className="info-value">{evaluationResults.course_information?.course || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Course Code</div>
-                  <div className="info-value">{evaluationResults.course_information?.code || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Year Level</div>
-                  <div className="info-value">
-                    <span className="year-badge">{evaluationResults.course_information?.year_level || 'N/A'}</span>
-                  </div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Academic Year</div>
-                  <div className="info-value">{evaluationResults.academic_year || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Semester</div>
-                  <div className="info-value">{evaluationResults.semester || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Department</div>
-                  <div className="info-value">{department?.name || 'N/A'}</div>
-                </div>
-              </div>
-            </div>
-
             {/* Instructor Information Section */}
             <div className="results-section">
-              <h3>👨‍🏫 Instructor Information</h3>
+              <div className="section-header">
+                <h3>👨‍🏫 Instructor Information</h3>
+                {evaluationResults.instructor_information?.teacher_id && (
+                  <button 
+                    className="dept-btn dept-btn-secondary"
+                    onClick={handleViewCourseRatings}
+                    disabled={courseRatingsLoading}
+                  >
+                    {courseRatingsLoading ? <LoadingSpinner size="small" /> : 'View Course Ratings'}
+                  </button>
+                )}
+              </div>
               <div className="info-grid">
                 <div className="info-card">
                   <div className="info-label">Instructor Name</div>
@@ -365,96 +398,22 @@ function EvaluationResults() {
               </div>
             </div>
 
-            {/* Quick Statistics Section */}
-            <div className="results-section">
-              <h3>📊 Quick Statistics</h3>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-icon">📝</div>
-                  <div className="stat-content">
-                    <div className="stat-value">{evaluationResults.quick_stats?.total_responses || 0}</div>
-                    <div className="stat-label">Total Responses</div>
-                    <div className="stat-subtitle">
-                      {evaluationResults.quick_stats?.expected_responses ? 
-                        `of ${evaluationResults.quick_stats.expected_responses} expected` : 
-                        'responses received'
-                      }
-                    </div>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon">👥</div>
-                  <div className="stat-content">
-                    <div className="stat-value">
-                      <ParticipationIndicator 
-                        rate={evaluationResults.quick_stats?.participation_rate || 0}
-                        variant="badge"
-                        size="large"
-                        showPercentage={true}
-                        showLabel={false}
-                      />
-                    </div>
-                    <div className="stat-label">Participation Rate</div>
-                    <div className="stat-subtitle">
-                      <ParticipationIndicator 
-                        rate={evaluationResults.quick_stats?.participation_rate || 0}
-                        variant="bar"
-                        size="small"
-                        showPercentage={false}
-                        showLabel={true}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon">✅</div>
-                  <div className="stat-content">
-                    <div className={`stat-value ${getDataQualityClass(evaluationResults.quick_stats?.data_quality)}`}>
-                      {evaluationResults.quick_stats?.data_quality || 'Unknown'}
-                    </div>
-                    <div className="stat-label">Data Quality</div>
-                    <div className="stat-subtitle">
-                      {evaluationResults.quick_stats?.data_quality === 'Excellent' ? 'Highly reliable data' :
-                       evaluationResults.quick_stats?.data_quality === 'Good' ? 'Reliable data' :
-                       evaluationResults.quick_stats?.data_quality === 'Limited' ? 'Limited reliability' :
-                       'Quality assessment unavailable'}
-                    </div>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon">⏱️</div>
-                  <div className="stat-content">
-                    <div className="stat-value">
-                      {evaluationResults.average_completion_time ? 
-                        `${Math.round(evaluationResults.average_completion_time)} min` : 
-                        'N/A'
-                      }
-                    </div>
-                    <div className="stat-label">Avg. Completion Time</div>
-                    <div className="stat-subtitle">
-                      {evaluationResults.average_completion_time ? 
-                        'per student response' : 
-                        'completion time not tracked'
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Weighted Score Breakdown Section */}
+            {/* Modern Final Evaluation Score Section */}
             {evaluationResults.weighted_scores && (
               <div className="results-section">
                 <h3>🎯 Final Evaluation Score</h3>
                 <div className="weighted-score-container">
-                  <div className="final-score-display">
-                    <div className="final-score-circle">
-                      <div className="score-value">{evaluationResults.final_score || evaluationResults.weighted_scores.weighted_score}%</div>
-                      <div className="score-label">Final Score</div>
-                      <div className="performance-level">
-                        {evaluationResults.performance_level || evaluationResults.weighted_scores.performance_level}
-                      </div>
-                    </div>
+                  <div className="modern-final-score-display">
+                    <ModernCircularProgress
+                      percentage={parseFloat(evaluationResults.final_score || evaluationResults.weighted_scores.weighted_score)}
+                      size={220}
+                      strokeWidth={14}
+                      title="Total"
+                      subtitle="Final Score"
+                      performanceLevel={evaluationResults.performance_level || evaluationResults.weighted_scores.performance_level}
+                      animated={true}
+                      showGlow={true}
+                    />
                   </div>
                   
                   <div className="score-breakdown">
@@ -554,27 +513,25 @@ function EvaluationResults() {
 
             {/* Participation Analysis intentionally removed per request */}
 
-            {/* Rating Distribution Section */}
+            {/* Instructor Courses Section */}
             <div className="results-section">
-              <h3>⭐ Rating Distribution</h3>
-              {ratingDistribution.length === 0 ? (
-                <div className="empty-state" style={{ padding: 12 }}>
-                  <p style={{ color: 'var(--muted)' }}>No ratings yet.</p>
+              <h3>📚 Instructor Courses</h3>
+              {evaluationResults.instructor_information?.teacher_id ? (
+                <div className="instructor-courses-container">
+                  <p className="section-description">
+                    View detailed rating distributions for each course taught by this instructor.
+                  </p>
+                  <button 
+                    className="dept-btn dept-btn-primary"
+                    onClick={handleViewCourseRatings}
+                    disabled={courseRatingsLoading}
+                  >
+                    {courseRatingsLoading ? <LoadingSpinner size="small" /> : 'View All Course Ratings'}
+                  </button>
                 </div>
               ) : (
-                <div className="ratings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                  {ratingDistribution.map(r => (
-                    <div key={r.rating} style={{ padding: 12, border: '1px solid #eee', borderRadius: 10 }} aria-label={`Rating ${r.rating} count ${r.count} (${r.percent}%)`}>
-                      <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>⭐ {r.rating}</span>
-                        <span>{r.percent}%</span>
-                      </div>
-                      <div style={{ fontSize: 18, fontWeight: 600, textAlign: 'center' }}>{r.count}</div>
-                      <div style={{ marginTop: 6, height: 6, background: '#f1f3f5', borderRadius: 6 }}>
-                        <div style={{ width: `${r.percent}%`, height: 6, background: '#0ea5e9', borderRadius: 6 }}></div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="empty-state" style={{ padding: 12 }}>
+                  <p style={{ color: 'var(--muted)' }}>Instructor information not available.</p>
                 </div>
               )}
             </div>
@@ -638,6 +595,171 @@ function EvaluationResults() {
           </div>
         )}
       </div>
+
+      {/* Course Ratings Modal */}
+      {showCourseRatings && (
+        <div className="modal-overlay" onClick={handleCloseCourseRatings}>
+          <div className="course-ratings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📚 Instructor Courses</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={handleCloseCourseRatings}
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {courseRatingsLoading ? (
+                <div className="loading-container">
+                  <LoadingSpinner size="medium" message="Loading course ratings..." />
+                </div>
+              ) : courseRatingsError ? (
+                <div className="error-container">
+                  <ErrorAlert
+                    error={{ response: { data: { message: courseRatingsError } } }}
+                    onRetry={loadCourseRatings}
+                    onDismiss={() => setCourseRatingsError(null)}
+                  />
+                </div>
+              ) : courseRatings?.data?.courses?.length > 0 ? (
+                <>
+                  <div className="teacher-info">
+                    <h4>👨‍🏫 {courseRatings.data.teacher.name}</h4>
+                    <p className="filters-info">
+                      Academic Year: {courseRatings.data.filters.academic_year} | 
+                      Semester: {courseRatings.data.filters.semester}
+                    </p>
+                  </div>
+                  
+                  <div className="courses-list">
+                    {courseRatings.data.courses.map((course, index) => (
+                      <div key={course.course_id} className="course-list-item">
+                        <div className="course-info">
+                          <div className="course-header">
+                            <h5 className="course-title">{course.course_title}</h5>
+                            <span className="course-code">{course.course_code}</span>
+                          </div>
+                          <div className="course-summary">
+                            <span className="summary-item">
+                              <strong>Final Score:</strong> {course.final_score}%
+                            </span>
+                            <span className="summary-item">
+                              <strong>Avg Rating:</strong> {course.average_rating}/5
+                            </span>
+                            <span className="summary-item">
+                              <strong>Responses:</strong> {course.total_responses}
+                            </span>
+                          </div>
+                        </div>
+                        <button 
+                          className="dept-btn dept-btn-primary course-detail-btn"
+                          onClick={() => handleViewCourseDetail(course)}
+                        >
+                          See Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state">
+                  <div className="empty-icon">📚</div>
+                  <h4>No Course Data Available</h4>
+                  <p>No course ratings found for this teacher in the selected period.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="dept-btn dept-btn-secondary"
+                onClick={handleCloseCourseRatings}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Individual Course Detail Modal */}
+      {showCourseDetail && selectedCourse && (
+        <div className="modal-overlay" onClick={handleCloseCourseDetail}>
+          <div className="course-ratings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📊 {selectedCourse.course_title} - Rating Distribution</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={handleCloseCourseDetail}
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="course-detail-container">
+                <div className="course-header-detail">
+                  <div className="course-title-section">
+                    <h4>{selectedCourse.course_title}</h4>
+                    <span className="course-code">{selectedCourse.course_code}</span>
+                  </div>
+                  <div className="course-period">
+                    <span>Academic Year: {selectedCourse.academic_year}</span>
+                    <span>Semester: {selectedCourse.semester}</span>
+                    <span>Year Level: {selectedCourse.year_level || 'N/A'}</span>
+                  </div>
+                </div>
+                
+                <div className="course-stats-detail">
+                  <div className="stat-item">
+                    <span className="stat-label">Final Score</span>
+                    <span className="stat-value final-score">{selectedCourse.final_score}%</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Average Rating</span>
+                    <span className="stat-value">{selectedCourse.average_rating}/5</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Total Responses</span>
+                    <span className="stat-value">{selectedCourse.total_responses}</span>
+                  </div>
+                </div>
+                
+                <div className="rating-distribution-detail">
+                  <h5>Rating Distribution</h5>
+                  <div className="rating-bars">
+                    {Object.entries(selectedCourse.rating_distribution).map(([rating, data]) => (
+                      <div key={rating} className="rating-bar-item">
+                        <span className="rating-label">⭐ {rating}</span>
+                        <div className="rating-bar">
+                          <div 
+                            className="rating-fill" 
+                            style={{ width: `${data.percentage || 0}%` }}
+                          ></div>
+                        </div>
+                        <span className="rating-count">{data.count} ({data.percentage || 0}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="dept-btn dept-btn-secondary"
+                onClick={handleCloseCourseDetail}
+              >
+                Back to Courses
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </DepartmentResultsErrorManager>
   </DepartmentResultsErrorBoundary>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useParams } from 'react-router-dom';
 import api from '../../../services/api';
 
@@ -52,10 +52,12 @@ function DepartmentLayout() {
     { path: '/courses', label: 'Courses', icon: '📚' },
     { path: '/instructors', label: 'Instructors', icon: '👨‍🏫' },
     { path: '/students', label: 'Students', icon: '👨‍🎓' },
-    { path: '/evaluations', label: 'Open Evaluation', icon: '📝' },
-    { path: '/peer-evaluations', label: 'Peer Evaluations', icon: '🤝' },
+    { path: '/evaluations', label: 'Open Evaluations', icon: '📝' },
+    { path: '/manage-evaluations', label: 'Manage Evaluations', icon: '⚙️' },
+    { path: '/hod-evaluations', label: 'HOD Evaluations', icon: '👨‍' },
+ 
     { path: '/results', label: 'Results', icon: '📊' },
-    { path: '/reports', label: 'Reports', icon: '📈' }
+    { path: '/reports', label: 'Reports', icon: '🗂️' }
   ];
 
   return (
