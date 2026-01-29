@@ -389,16 +389,16 @@ function EnhancedTeacherRankings({
                         <div className="text-caption" style={{ marginBottom: 'var(--space-2)', color: 'var(--text-tertiary)' }}>
                           COURSES
                         </div>
-                        <div className="courses-list enhanced-flex enhanced-flex-wrap enhanced-gap-1">
+                        <div className="courses-list enhanced-flex enhanced-flex-col enhanced-gap-1">
                           {teacher.courses_taught.slice(0, 3).map((course, index) => (
-                            <span key={index} className="enhanced-badge enhanced-badge-neutral course-badge">
+                            <div key={index} className="course-list-item">
                               {course}
-                            </span>
+                            </div>
                           ))}
                           {teacher.courses_taught.length > 3 && (
-                            <span className="enhanced-badge enhanced-badge-neutral">
-                              +{teacher.courses_taught.length - 3} more
-                            </span>
+                            <div className="course-list-item" style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                              +{teacher.courses_taught.length - 3} more courses
+                            </div>
                           )}
                         </div>
                       </div>

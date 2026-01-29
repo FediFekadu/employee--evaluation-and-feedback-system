@@ -33,10 +33,13 @@
 .instructor-card.compact.expanded { padding-bottom: 12px; }
 .instructor-card.compact .card-details { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
 .instructor-card.compact .section-title { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-.instructor-card.compact .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.instructor-card.compact .course-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 8px; font-size: 12px; }
-.instructor-card.compact .course-chip .code { font-weight: 700; }
-.instructor-card.compact .course-chip .sep { color: var(--muted); }
+.instructor-card.compact .course-list { display: flex; flex-direction: column; gap: 4px; }
+.instructor-card.compact .course-list-item { 
+  font-size: 12px; 
+  color: var(--text); 
+  padding: 2px 0;
+  line-height: 1.4;
+}
 .instructor-card.compact .empty-inline { font-size: 12px; color: var(--muted); }
 .instructor-card.compact .evaluations-summary .summary-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .instructor-card.compact .summary-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px; border: 1px solid var(--border-soft); border-radius: 8px; font-size: 12px; }

@@ -249,13 +249,11 @@ function DepartmentInstructors() {
                             <div className="courses-list">
                               <div className="section-title">Assigned Courses</div>
                               {details.courses?.length ? (
-                                <div className="chips">
+                                <div className="course-list">
                                   {details.courses.map((course) => (
-                                    <span key={course.id} className="course-chip">
-                                      <span className="code">{course.code}</span>
-                                      <span className="sep">·</span>
-                                      <span className="title">{course.title}</span>
-                                    </span>
+                                    <div key={course.id} className="course-list-item">
+                                      {course.code} • {course.title}
+                                    </div>
                                   ))}
                                 </div>
                               ) : (

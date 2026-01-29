@@ -634,34 +634,81 @@ function EvaluationResults() {
                     </p>
                   </div>
                   
-                  <div className="courses-list">
-                    {courseRatings.data.courses.map((course, index) => (
-                      <div key={course.course_id} className="course-list-item">
-                        <div className="course-info">
-                          <div className="course-header">
-                            <h5 className="course-title">{course.course_title}</h5>
-                            <span className="course-code">{course.course_code}</span>
+                  <div className="courses-table">
+                    <div className="courses-table-header">
+                      <div className="header-cell course-name-header">Course</div>
+                      <div className="header-cell year-level-header">Year Level</div>
+                      <div className="header-cell semester-header">Semester</div>
+                      <div className="header-cell score-header">Final Score</div>
+                      <div className="header-cell rating-header">Avg Rating</div>
+                      <div className="header-cell responses-header">Responses</div>
+                      <div className="header-cell actions-header">Actions</div>
+                    </div>
+                    
+                    <div className="courses-table-body">
+                      {courseRatings.data.courses.map((course, index) => (
+                        <div key={course.course_id} className="course-table-row">
+                          <div className="table-cell course-name-cell">
+                            <div className="course-name-content">
+                              <div className="course-title">{course.course_title}</div>
+                              <div className="course-code">{course.course_code}</div>
+                            </div>
                           </div>
-                          <div className="course-summary">
-                            <span className="summary-item">
-                              <strong>Final Score:</strong> {course.final_score}%
+                          <div className="table-cell year-level-cell">
+                            <span className="year-level-badge">
+                              Year {course.year_level || 'N/A'}
                             </span>
-                            <span className="summary-item">
-                              <strong>Avg Rating:</strong> {course.average_rating}/5
+                          </div>
+                          <div className="table-cell semester-cell">
+                            <span className="semester-badge">
+                              {course.semester || 'N/A'}
                             </span>
-                            <span className="summary-item">
-                              <strong>Responses:</strong> {course.total_responses}
-                            </span>
+                          </div>
+                          <div className="table-cell score-cell">
+                            <div className="score-display">
+                              <span className="score-value">{course.final_score}%</span>
+                              <div className="score-bar">
+                                <div 
+                                  className="score-fill" 
+                                  style={{ width: `${course.final_score}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="table-cell rating-cell">
+                            <div className="rating-display">
+                              <span className="rating-value">{course.average_rating}/5</span>
+                              <div className="stars">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <span 
+                                    key={star} 
+                                    className={`star ${star <= Math.round(course.average_rating) ? 'filled' : ''}`}
+                                  >
+                                    ⭐
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="table-cell responses-cell">
+                            <span className="responses-count">{course.total_responses}</span>
+                          </div>
+                          <div className="table-cell actions-cell">
+                            <button 
+                              className="detail-btn"
+                              onClick={() => handleViewCourseDetail(course)}
+                              title="View detailed ratings"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                              </svg>
+                              Details
+                            </button>
                           </div>
                         </div>
-                        <button 
-                          className="dept-btn dept-btn-primary course-detail-btn"
-                          onClick={() => handleViewCourseDetail(course)}
-                        >
-                          See Details
-                        </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </>
               ) : (

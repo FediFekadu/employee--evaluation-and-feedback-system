@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../../services/api';
+import '../../../styles/courses.css';
 
 function DepartmentCourses() {
   const { id } = useParams();
@@ -41,6 +42,26 @@ function DepartmentCourses() {
 
   const teacherOptions = department?.teachers || [];
   const courseOptions = department?.courses || [];
+
+  // Get available teachers for assignment (exclude those already assigned to the selected course for the same semester)
+  const availableTeachers = useMemo(() => {
+    if (!assignForm.course_id || !assignForm.semester) {
+      return teacherOptions;
+    }
+    
+    const selectedCourse = courseOptions.find(c => c.id === Number(assignForm.course_id));
+    if (!selectedCourse) {
+      return teacherOptions;
+    }
+    
+    // Get teachers already assigned to this course for the same semester
+    const assignedTeacherIds = (selectedCourse.teachers || [])
+      .filter(teacher => teacher.pivot?.semester === assignForm.semester)
+      .map(teacher => teacher.id);
+    
+    // Return teachers not already assigned to this course for the same semester
+    return teacherOptions.filter(teacher => !assignedTeacherIds.includes(teacher.id));
+  }, [teacherOptions, courseOptions, assignForm.course_id, assignForm.semester]);
 
   const filteredCourses = useMemo(() => {
     return courseOptions.filter(course => {
@@ -98,9 +119,18 @@ function DepartmentCourses() {
         return { ...prev, courses };
       });
       setAssignForm({ course_id: '', teacher_id: '', year_level: '1', semester: 'Semester I' });
-      alert('Instructor assigned');
+      alert('Instructor assigned successfully');
     } catch (e) {
-      alert('Failed to assign instructor');
+      const errorData = e.response?.data;
+      if (errorData?.error === 'duplicate_assignment') {
+        alert(`Assignment failed: ${errorData.message}`);
+      } else if (errorData?.error === 'teacher_already_assigned') {
+        alert(`Assignment failed: ${errorData.message}`);
+      } else if (errorData?.error === 'department_mismatch') {
+        alert(`Assignment failed: ${errorData.message}`);
+      } else {
+        alert('Failed to assign instructor. Please try again.');
+      }
     } finally {
       setAssignSubmitting(false);
     }
@@ -204,8 +234,8 @@ function DepartmentCourses() {
             </select>
           </div>
 
-          {/* Courses Grid */}
-          <div className="courses-grid">
+          {/* Courses List */}
+          <div className="courses-list-container">
             {filteredCourses.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">📚</div>
@@ -219,49 +249,57 @@ function DepartmentCourses() {
                 </button>
               </div>
             ) : (
-              filteredCourses.map((course) => (
-                <div key={course.id} className="course-card">
-                  <div className="course-header">
-                    <div className="course-info">
-                      <h3 className="course-title">{course.title}</h3>
-                      <span className="course-code">{course.code}</span>
-                      {(course.year_level || course.semester) && (
-                        <div className="course-meta">
-                          {course.year_level && <span className="meta-badge">Year {course.year_level}</span>}
-                          {course.semester && <span className="meta-badge">{course.semester}</span>}
+              <div className="courses-list">
+                {filteredCourses.map((course) => (
+                  <div key={course.id} className="course-list-item">
+                    <div className="course-item-header">
+                      <div className="course-icon">
+                        📚
+                      </div>
+                      <div className="course-main-info">
+                        <div className="course-title-row">
+                          <h3 className="course-title">{course.title}</h3>
+                          <span className="course-code-badge">{course.code}</span>
                         </div>
-                      )}
+                        <div className="course-meta-row">
+                          {course.year_level && <span className="meta-info">Year {course.year_level}</span>}
+                          {course.semester && <span className="meta-info">{course.semester}</span>}
+                          <span className="instructor-count">{(course.teachers || []).length} Instructor{(course.teachers || []).length !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                      <div className="course-actions">
+                        <span className="status-badge active">Active</span>
+                        <button className="action-btn">Assign</button>
+                        <button className="action-btn">Reassign</button>
+                      </div>
                     </div>
-                    <div className="course-status">
-                      <span className="status-badge active">Active</span>
-                    </div>
-                  </div>
-                  
-                  {course.description && (
-                    <p className="course-description">{course.description}</p>
-                  )}
-                  
-                  <div className="course-instructors">
-                    <h4>Assigned Instructors</h4>
-                    {(course.teachers || []).length === 0 ? (
-                      <p className="no-instructors">No instructors assigned</p>
-                    ) : (
-                      <div className="instructor-list">
-                        {(course.teachers || []).map((teacher) => (
-                          <div key={`${course.id}-${teacher.id}`} className="instructor-item">
-                            <div className="instructor-info">
+                    
+                    {course.description && (
+                      <div className="course-description">
+                        {course.description}
+                      </div>
+                    )}
+                    
+                    <div className="course-instructors-section">
+                      <div className="section-label">Assigned Instructors</div>
+                      {(course.teachers || []).length === 0 ? (
+                        <div className="no-instructors">No instructors assigned</div>
+                      ) : (
+                        <div className="instructors-list">
+                          {(course.teachers || []).map((teacher) => (
+                            <div key={`${course.id}-${teacher.id}`} className="instructor-item">
                               <span className="instructor-name">{teacher.name}</span>
                               <span className="instructor-details">
                                 Year {teacher?.pivot?.year_level || '-'} • {teacher?.pivot?.semester || '-'}
                               </span>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -390,7 +428,7 @@ function DepartmentCourses() {
                 <select 
                   className="form-select" 
                   value={assignForm.course_id} 
-                  onChange={(e) => setAssignForm((f) => ({ ...f, course_id: e.target.value }))}
+                  onChange={(e) => setAssignForm((f) => ({ ...f, course_id: e.target.value, teacher_id: '' }))}
                 >
                   <option value="">Select course</option>
                   {courseOptions.map((c) => (
@@ -402,19 +440,44 @@ function DepartmentCourses() {
               </div>
               
               <div className="form-group">
+                <label className="form-label">Semester *</label>
+                <select 
+                  className="form-select" 
+                  value={assignForm.semester} 
+                  onChange={(e) => setAssignForm((f) => ({ ...f, semester: e.target.value, teacher_id: '' }))}
+                >
+                  <option value="Semester I">Semester I</option>
+                  <option value="Semester II">Semester II</option>
+                </select>
+              </div>
+              
+              <div className="form-group">
                 <label className="form-label">Instructor *</label>
                 <select 
                   className="form-select" 
                   value={assignForm.teacher_id} 
                   onChange={(e) => setAssignForm((f) => ({ ...f, teacher_id: e.target.value }))}
+                  disabled={!assignForm.course_id || !assignForm.semester}
                 >
-                  <option value="">Select instructor</option>
-                  {teacherOptions.map((t) => (
+                  <option value="">
+                    {!assignForm.course_id || !assignForm.semester 
+                      ? 'Select course and semester first' 
+                      : availableTeachers.length === 0 
+                        ? 'No available instructors for this course/semester'
+                        : 'Select instructor'
+                    }
+                  </option>
+                  {availableTeachers.map((t) => (
                     <option key={t.id} value={String(t.id)}>
                       {t.name}
                     </option>
                   ))}
                 </select>
+                {assignForm.course_id && assignForm.semester && availableTeachers.length === 0 && (
+                  <small className="form-hint error">
+                    All instructors are already assigned to this course for {assignForm.semester}
+                  </small>
+                )}
               </div>
               
               <div className="form-group">
@@ -429,24 +492,12 @@ function DepartmentCourses() {
                   ))}
                 </select>
               </div>
-              
-              <div className="form-group">
-                <label className="form-label">Semester *</label>
-                <select 
-                  className="form-select" 
-                  value={assignForm.semester} 
-                  onChange={(e) => setAssignForm((f) => ({ ...f, semester: e.target.value }))}
-                >
-                  <option value="Semester I">Semester I</option>
-                  <option value="Semester II">Semester II</option>
-                </select>
-              </div>
             </div>
             
             <div className="form-actions">
               <button 
                 className="dept-btn dept-btn-primary" 
-                disabled={assignSubmitting} 
+                disabled={assignSubmitting || !assignForm.course_id || !assignForm.teacher_id || availableTeachers.length === 0} 
                 onClick={assignInstructor}
               >
                 {assignSubmitting ? (

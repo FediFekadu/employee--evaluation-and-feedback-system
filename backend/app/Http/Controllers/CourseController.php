@@ -82,8 +82,45 @@ class CourseController extends Controller
             ], 422);
         }
 
-        // Attach without detaching existing instructors
-        $course->teachers()->syncWithoutDetaching([$teacher->id]);
+        // Check if another teacher is already assigned to this course for the same semester
+        $semester = $data['semester'] ?? null;
+        if ($semester) {
+            $existingAssignment = $course->teachers()
+                ->wherePivot('semester', $semester)
+                ->where('teacher_id', '!=', $teacher->id)
+                ->exists();
+
+            if ($existingAssignment) {
+                return response()->json([
+                    'message' => 'Another instructor is already assigned to this course for ' . $semester,
+                    'error' => 'duplicate_assignment',
+                ], 422);
+            }
+        }
+
+        // Check if this specific teacher is already assigned to this course for the same semester
+        $teacherAlreadyAssigned = $course->teachers()
+            ->where('teacher_id', $teacher->id)
+            ->wherePivot('semester', $semester)
+            ->exists();
+
+        if ($teacherAlreadyAssigned) {
+            return response()->json([
+                'message' => 'This instructor is already assigned to this course for ' . ($semester ?: 'the selected semester'),
+                'error' => 'teacher_already_assigned',
+            ], 422);
+        }
+
+        // Attach the teacher with pivot data
+        $pivotData = [];
+        if (isset($data['year_level'])) {
+            $pivotData['year_level'] = $data['year_level'];
+        }
+        if (isset($data['semester'])) {
+            $pivotData['semester'] = $data['semester'];
+        }
+
+        $course->teachers()->attach($teacher->id, $pivotData);
 
         // Reload relations to return updated course info
         $course->load('department', 'teachers');
