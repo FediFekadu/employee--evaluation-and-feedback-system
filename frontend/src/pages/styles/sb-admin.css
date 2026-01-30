@@ -23,6 +23,7 @@
 .content-wrapper {
   margin-left: 260px; /* Fixed offset: no reflow when sidebar collapses */
   padding: 1rem;
+  padding-left: 0; /* Remove gap next to sidebar */
   min-height: 100vh;
   background-color: var(--bs-body-bg);
   overflow-x: hidden; /* No horizontal overflow */
@@ -36,7 +37,7 @@
 
 .content-topbar {
   position: sticky;
-  top: 0;
+  top: var(--system-header-height);
   z-index: 1020;
   background-color: var(--bs-body-bg);
 }

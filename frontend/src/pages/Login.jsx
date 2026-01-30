@@ -98,7 +98,7 @@ function Login() {
             <div className="logo-icon">🎓</div>
             <div className="logo-text">
               <h1>Welcome Back</h1>
-              <p>Sign in to your evaluation portal</p>
+              <p>Log in to your evaluation portal</p>
             </div>
           </div>
         </div>
@@ -137,7 +137,7 @@ function Login() {
                 Student ID
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">🆔</span>
+                <span className="input-icon"></span>
                 <input
                   id="studentId"
                   type="text"
@@ -150,30 +150,29 @@ function Login() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="studentPassword" className="form-label">
-                Password
-              </label>
-              <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
-                <input
-                  id="studentPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input"
-                  placeholder="Enter your password"
-                  value={studentPassword}
-                  onChange={(e) => setStudentPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </button>
-              </div>
+          <div className="form-group">
+            <label htmlFor="studentPassword" className="form-label">
+              Password
+            </label>
+            <div className="input-wrapper">
+              <input
+                id="studentPassword"
+                type={showPassword ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Enter your password"
+                value={studentPassword}
+                onChange={(e) => setStudentPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
             </div>
+          </div>
 
             <button
               type="submit"
@@ -194,11 +193,9 @@ function Login() {
             </button>
 
             <div className="login-help">
-              <p className="help-text">
-                <strong>Default Password:</strong> student123
-              </p>
+          
               <p className="help-subtext">
-                Contact your department admin if you need assistance
+                Contact your department if you need assistance
               </p>
             </div>
           </form>
@@ -212,7 +209,6 @@ function Login() {
                 Email Address
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">📧</span>
                 <input
                   id="email"
                   type="email"
@@ -230,7 +226,6 @@ function Login() {
                 Password
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
                 <input
                   id="adminPassword"
                   type={showPassword ? 'text' : 'password'}
@@ -268,15 +263,7 @@ function Login() {
               )}
             </button>
 
-            <div className="login-help">
-              <p className="help-text">
-                <strong>Demo Accounts:</strong>
-              </p>
-              <p className="help-subtext">
-                Admin: admin@college.local / Admin@1234<br />
-                Teacher: Use credentials from admin panel
-              </p>
-            </div>
+            {/* Removed demo accounts section for a cleaner, professional UI */}
           </form>
         )}
 

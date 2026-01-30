@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import api from './services/api';
 import Login from './pages/Login';
 // Enhanced Error Handling System
@@ -65,6 +65,8 @@ function DepartmentEvaluationResultsWrapper() {
 }
 
 function App() {
+  const location = useLocation();
+  const showFooter = location.pathname === '/';
   // Initialize from localStorage synchronously to avoid flicker
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -223,11 +225,13 @@ function App() {
           </Routes>
         </main>
 
-        <footer className="footer">
-          <div className="container">
-            <span>© {new Date().getFullYear()} Informatics College. All rights reserved.</span>
-          </div>
-        </footer>
+        {showFooter && (
+          <footer className="footer">
+            <div className="container">
+              <span>© {new Date().getFullYear()} Informatics College. All rights reserved.</span>
+            </div>
+          </footer>
+        )}
       </div>
     </EnhancedErrorRecoveryManager>
   );

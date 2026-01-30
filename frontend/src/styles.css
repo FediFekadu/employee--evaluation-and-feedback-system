@@ -14,7 +14,7 @@
   --muted: #9ca3af; /* gray-400 */
   --primary: #22d3ee; /* cyan-400 */
   --primary-dark: #0891b2; /* cyan-700 */
-  --accent: #a78bfa; /* violet-400 */
+  --accent: #0d6efd; /* violet-400 */
   /* UI tokens */
   --border-soft: rgba(255,255,255,0.08);
   --hover-bg: rgba(255,255,255,0.06);
@@ -28,9 +28,9 @@
   --panel: #ffffff;
   --text: #0f172a; /* slate-900 */
   --muted: #475569; /* slate-600 */
-  --primary: #0ea5e9; /* sky-500 */
-  --primary-dark: #0284c7; /* sky-600 */
-  --accent: #7c3aed; /* violet-600 */
+  --primary: #0d6efd; /* sky-500 */
+  --primary-dark: #0d6efd; /* sky-600 */
+  --accent: #0d6efd; /* violet-600 */
   /* UI tokens for light */
   --border-soft: rgba(2, 8, 23, 0.12);
   --hover-bg: rgba(2, 8, 23, 0.06);
@@ -2577,7 +2577,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   padding: 20px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+  background: var(--bg-end);
 }
 
 /* Animated Background */
@@ -2594,8 +2594,8 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 .bg-shape {
   position: absolute;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  opacity: 0.1;
+  background: #0d6efd;
+  opacity: 0.06;
   animation: float 6s ease-in-out infinite;
 }
 
@@ -2664,23 +2664,21 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 .logo-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: #0d6efd;
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  box-shadow: 0 8px 32px rgba(34, 211, 238, 0.3);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(13, 110, 253, 0.25);
 }
 
 .logo-text h1 {
   font-size: 28px;
   font-weight: 700;
   margin: 0 0 4px 0;
-  background: linear-gradient(135deg, var(--text), var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text);
 }
 
 .logo-text p {
@@ -2718,13 +2716,13 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 
 .tab-button:hover {
   color: var(--text);
-  background: var(--hover-bg);
+  background: rgba(13, 110, 253, 0.08);
 }
 
 .tab-active {
-  background: var(--primary) !important;
-  color: #041b1f !important;
-  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.3);
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
 }
 
 .tab-icon {
@@ -2784,7 +2782,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 
 .form-input {
   width: 100%;
-  padding: 16px 16px 16px 48px;
+  padding: 16px;
   background: var(--bg-end);
   border: 1px solid var(--border-soft);
   border-radius: 12px;
@@ -2795,8 +2793,8 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 
 .form-input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
 }
 
 .form-input::placeholder {
@@ -2826,10 +2824,10 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   justify-content: center;
   gap: 8px;
   padding: 16px 24px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: #0d6efd;
   border: none;
   border-radius: 12px;
-  color: #041b1f;
+  color: #ffffff;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -2840,7 +2838,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 
 .login-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(34, 211, 238, 0.4);
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
 }
 
 .login-button:active {
@@ -2867,7 +2865,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   width: 16px;
   height: 16px;
   border: 2px solid rgba(4, 27, 31, 0.3);
-  border-top: 2px solid #041b1f;
+  border-top: 2px solid #ffffff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -2908,7 +2906,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 }
 
 .back-link {
-  color: var(--primary);
+  color: #0d6efd;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -2916,7 +2914,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 }
 
 .back-link:hover {
-  color: var(--primary-dark);
+  color: #0b5ed7;
 }
 
 .footer-text {
@@ -2950,7 +2948,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   }
   
   .form-input {
-    padding: 14px 14px 14px 44px;
+    padding: 14px;
     font-size: 16px; /* Prevent zoom on iOS */
   }
   
@@ -3004,7 +3002,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 .login-button:focus-visible,
 .password-toggle:focus-visible,
 .back-link:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid #0d6efd;
   outline-offset: 2px;
 }
 
