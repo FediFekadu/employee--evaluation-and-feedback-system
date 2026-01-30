@@ -33,8 +33,7 @@ import TeacherPeerEvaluationsList from './pages/dashboards/Teacher/PeerEvaluatio
 // Department dashboard nested
 import DepartmentLayout from './pages/dashboards/Department/Layout';
 import DepartmentOverview from './pages/dashboards/Department/Overview';
-import DepartmentCourses from './pages/dashboards/Department/Courses';
-import DepartmentInstructors from './pages/dashboards/Department/Instructors';
+import DepartmentCoursesAndInstructors from './pages/dashboards/Department/CoursesAndInstructors';
 import DepartmentStudents from './pages/dashboards/Department/Students';
 import DepartmentEvaluations from './pages/dashboards/Department/Evaluations';
 import DepartmentResults from './pages/dashboards/Department/Results';
@@ -234,8 +233,7 @@ function App() {
             {/* Department dashboard */}
             <Route path="/department/:id" element={<DepartmentLayout />}>
               <Route index element={<DepartmentOverview />} />
-              <Route path="courses" element={<DepartmentCourses />} />
-              <Route path="instructors" element={<DepartmentInstructors />} />
+              <Route path="courses-instructors" element={<DepartmentCoursesAndInstructors />} />
               <Route path="students" element={<DepartmentStudents />} />
               <Route path="evaluations" element={<DepartmentEvaluations />} />
               <Route path="hod-evaluations" element={<HodEvaluations />} />

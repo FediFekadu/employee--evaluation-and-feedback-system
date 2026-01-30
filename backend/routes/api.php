@@ -47,6 +47,7 @@ Route::post('/courses', [CourseController::class, 'store']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
 Route::put('/courses/{course}', [CourseController::class, 'update']);
 Route::post('/courses/{id}/assign-teacher', [CourseController::class, 'assignTeacher']);
+Route::post('/courses/{id}/remove-teacher', [CourseController::class, 'removeTeacher']);
 
 Route::get('/evaluations', [EvaluationController::class, 'index']);
 Route::post('/evaluations', [EvaluationController::class, 'store']);

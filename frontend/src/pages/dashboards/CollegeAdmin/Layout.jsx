@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import '../../../styles/admin-layout.css';
 
 function CollegeAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

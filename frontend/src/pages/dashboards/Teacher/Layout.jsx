@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import '../../../styles/teacher-layout.css';
 
 function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

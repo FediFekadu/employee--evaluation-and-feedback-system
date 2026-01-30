@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useParams } from 'react-router-dom';
 import api from '../../../services/api';
+import '../../../styles/sidebar.css';
 
 function DepartmentLayout() {
   const { id } = useParams();
@@ -49,8 +50,7 @@ function DepartmentLayout() {
 
   const navItems = [
     { path: '', label: 'Overview', icon: '📊' },
-    { path: '/courses', label: 'Courses', icon: '📚' },
-    { path: '/instructors', label: 'Instructors', icon: '👨‍🏫' },
+    { path: '/courses-instructors', label: 'Courses & Instructors', icon: '📚👥' },
     { path: '/students', label: 'Students', icon: '👨‍🎓' },
     { path: '/evaluations', label: 'Open Evaluations', icon: '📝' },
     { path: '/manage-evaluations', label: 'Manage Evaluations', icon: '⚙️' },

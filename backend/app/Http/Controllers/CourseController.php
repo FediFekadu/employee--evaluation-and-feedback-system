@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class CourseController extends Controller
 {
@@ -129,5 +131,61 @@ class CourseController extends Controller
             'message' => 'Instructor assigned successfully',
             'course' => $course,
         ]);
+    }
+
+    /**
+     * Remove a teacher from a course.
+     */
+    public function removeTeacher(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'teacher_id' => 'required|integer|exists:teachers,id',
+                'semester' => 'required|string|in:Semester I,Semester II',
+            ]);
+
+            $course = Course::findOrFail($id);
+            $teacherId = $request->teacher_id;
+            $semester = $request->semester;
+
+            // Verify teacher is actually assigned to this course for the specified semester
+            $assignment = $course->teachers()
+                ->where('teacher_id', $teacherId)
+                ->where('semester', $semester)
+                ->first();
+
+            if (!$assignment) {
+                return response()->json([
+                    'error' => 'teacher_not_assigned',
+                    'message' => 'The selected instructor is not assigned to this course for the specified semester.'
+                ], 400);
+            }
+
+            // Remove the assignment
+            $course->teachers()->detach($teacherId);
+
+            // Load the updated course with teachers
+            $course->load(['teachers' => function($query) {
+                $query->withPivot('year_level', 'semester');
+            }]);
+
+            return response()->json([
+                'message' => 'Instructor removed successfully',
+                'course' => $course
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'validation_failed',
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error removing teacher from course: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'server_error',
+                'message' => 'An error occurred while removing the instructor'
+            ], 500);
+        }
     }
 }
