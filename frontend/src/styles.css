@@ -39,7 +39,7 @@
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
-body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%); color: var(--text); }
+body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg-end); color: var(--text); }
 
 .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
 .navbar { position: sticky; top: 0; backdrop-filter: blur(8px); background: var(--navbar-bg); border-bottom: 1px solid var(--border-soft); }
@@ -740,6 +740,39 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
     display: none;
   }
 }
+
+/* === Global Gradient Neutralization Overrides === */
+/* Remove decorative gradients across headers, badges, and brand elements */
+:root { --header-bg: var(--panel); }
+
+.brand-badge,
+.brand-icon {
+  background: var(--panel) !important;
+  box-shadow: none !important;
+}
+
+.nav-item::before {
+  background: var(--border-soft) !important;
+}
+
+/* Common header containers across dashboards */
+.dashboard-header,
+.evaluation-header,
+.evaluation-results-header,
+.table-header,
+.card-header,
+.modal-header,
+.panel-header,
+.mobile-header {
+  background: var(--panel) !important;
+  background-image: none !important;
+}
+
+/* Fall-through: any header-like class should avoid gradient images */
+*[class*="header"] {
+  background-image: none !important;
+}
+
 
 @media (max-width: 768px) {
   .department-main,

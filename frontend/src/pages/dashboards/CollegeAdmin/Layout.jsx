@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import '../../../styles/admin-layout.css';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import '../../styles/sb-admin.css';
+import '../../styles/sb-admin-unified.css';
 
 function CollegeAdminLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -27,117 +29,108 @@ function CollegeAdminLayout() {
         });
       }
       // Escape to close mobile sidebar
-      if (e.key === 'Escape' && sidebarOpen) {
-        setSidebarOpen(false);
+      if (e.key === 'Escape' && overlayOpen) {
+        setOverlayOpen(false);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [sidebarOpen]);
+  }, [overlayOpen]);
+
+  const handleLogout = async () => {
+    try { /* optional API: await api.post('/auth/logout') */ } catch {}
+    try {
+      localStorage.removeItem('auth_role');
+      localStorage.removeItem('department_id');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('student_id');
+      localStorage.removeItem('teacher_id');
+    } catch {}
+    navigate('/login');
+  };
 
   const navigationItems = [
-    { to: '/admin', label: 'Overview', icon: '📊' },
-    { to: '/admin/departments', label: 'Departments', icon: '🏢' },
-    { to: '/admin/admins', label: 'Department Admins', icon: '👨‍💼' },
-    { to: '/admin/instructors', label: 'Instructors', icon: '👨‍🏫' },
-    { to: '/admin/students', label: 'Students', icon: '👥' },
-    { to: '/admin/courses', label: 'Courses', icon: '📚' },
-    { to: '/admin/evaluations', label: 'Evaluations', icon: '📝' },
-    { to: '/admin/reports', label: 'Reports & Analytics', icon: '📈' },
-    { to: '/admin/settings', label: 'System Settings', icon: '⚙️' },
-    { to: '/admin/communication', label: 'Communication', icon: '💬' },
-    { to: '/admin/notifications', label: 'Notifications', icon: '🔔' }
+    { to: '/admin', label: 'Overview', iconClass: 'bi-speedometer' },
+    { to: '/admin/departments', label: 'Departments', iconClass: 'bi-building' },
+    { to: '/admin/admins', label: 'Department Admins', iconClass: 'bi-person-badge' },
+    { to: '/admin/instructors', label: 'Instructors', iconClass: 'bi-people' },
+    { to: '/admin/students', label: 'Students', iconClass: 'bi-people-fill' },
+    { to: '/admin/courses', label: 'Courses', iconClass: 'bi-journal-bookmark' },
+    { to: '/admin/evaluations', label: 'Evaluations', iconClass: 'bi-clipboard-data' },
+    { to: '/admin/reports', label: 'Reports & Analytics', iconClass: 'bi-graph-up' },
+    { to: '/admin/settings', label: 'System Settings', iconClass: 'bi-gear' },
+    { to: '/admin/communication', label: 'Communication', iconClass: 'bi-chat-dots' },
+    { to: '/admin/notifications', label: 'Notifications', iconClass: 'bi-bell' }
   ];
 
   return (
-    <div className="admin-layout">
-      {/* Mobile Header */}
-      <div className="mobile-header">
-        <button 
-          className={`mobile-menu-toggle ${sidebarOpen ? 'active' : ''}`}
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-label="Toggle menu"
-        >
-          <span className="hamburger-line"></span>
-          <span className="hamburger-line"></span>
-          <span className="hamburger-line"></span>
-        </button>
-        <h1 className="mobile-title">College Admin</h1>
-      </div>
-
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-brand">
-            <div className="brand-icon">🎓</div>
-            <div className="brand-text">
-              <h3>College Admin</h3>
-              <p>Management Portal</p>
-            </div>
+    <div className={`sb-layout ${sidebarCollapsed ? 'sb-collapsed' : ''} ${overlayOpen ? 'overlay-open' : ''}`}>
+      {/* Sidebar inside the layout wrapper */}
+      <aside className="sb-sidebar" aria-label="Admin navigation">
+        <div className="sb-side-header">
+          <div className="sb-brand">
+            <div className="sb-brand-icon"><i className="bi bi-building"></i></div>
+            <div className="sb-brand-text">College Admin</div>
           </div>
-          <button 
-            className="sidebar-minimize"
-            onClick={() => {
-              setSidebarCollapsed(v => {
-                const next = !v;
-                try { localStorage.setItem('adminSidebarCollapsed', next ? 'true' : 'false'); } catch {}
-                return next;
-              });
-            }}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={sidebarCollapsed ? 'Expand (Ctrl+B)' : 'Minimize (Ctrl+B)'}
-          >
-            {sidebarCollapsed ? '▸' : '◂'}
-          </button>
-          <button 
-            className="sidebar-close"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Close menu"
-          >
-            ✕
-          </button>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navigationItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => 
-                `nav-item ${isActive ? 'nav-item-active' : ''}`
-              }
-              onClick={() => setSidebarOpen(false)}
+          <div className="d-flex align-items-center gap-2">
+            <button
+              className="sb-collapse-btn"
+              onClick={() => {
+                setSidebarCollapsed(v => {
+                  const next = !v;
+                  try { localStorage.setItem('adminSidebarCollapsed', next ? 'true' : 'false'); } catch {}
+                  return next;
+                });
+              }}
+              title={sidebarCollapsed ? 'Expand (Ctrl+B)' : 'Collapse (Ctrl+B)'}
+              aria-label="Toggle sidebar collapse"
             >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">A</div>
-            <div className="user-details">
-              <p className="user-name">Admin User</p>
-              <p className="user-role">System Administrator</p>
-            </div>
+              <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
+            </button>
+            <button
+              className="sb-collapse-btn d-lg-none"
+              onClick={() => setOverlayOpen(false)}
+              aria-label="Close menu"
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
           </div>
         </div>
+
+        <nav className="sb-nav">
+          <ul className="nav nav-pills flex-column">
+            {navigationItems.map((item) => (
+              <li key={item.to} className="nav-item">
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  onClick={() => setOverlayOpen(false)}
+                >
+                  <i className={`bi ${item.iconClass}`}></i>
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              </li>
+            ))}
+            <li className="nav-item mt-2">
+              <button className="nav-link" onClick={handleLogout} type="button">
+                <i className="bi bi-box-arrow-right"></i>
+                <span className="nav-label">Logout</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
       </aside>
 
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div 
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Content wrapper next to sidebar */}
+      <div className="sb-content">
+        <div className="sb-page">
+          <Outlet />
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <main className="admin-main">
-        <Outlet />
-      </main>
+      {/* Mobile overlay */}
+      <div className="sb-overlay" onClick={() => setOverlayOpen(false)} />
     </div>
   );
 }

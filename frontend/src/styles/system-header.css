@@ -1,0 +1,63 @@
+/* Global system header used across the entire app */
+:root { --system-header-height: 56px; }
+
+.system-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--system-header-height);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border-soft);
+  z-index: 1000;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+
+.system-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+
+.system-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+.system-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+}
+.system-brand-text { font-weight: 600; }
+
+.system-actions { display: flex; align-items: center; gap: 10px; }
+
+.system-btn {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+.system-btn:hover { background: var(--hover-bg); }
+
+.system-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* Container offset to prevent overlay */
+.has-system-header { padding-top: var(--system-header-height); }

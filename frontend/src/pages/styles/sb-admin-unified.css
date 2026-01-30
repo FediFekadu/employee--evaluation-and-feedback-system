@@ -1,0 +1,167 @@
+/* Unified Admin Dashboard Layout inspired by StartBootstrap SB Admin 2 */
+
+/* Layout wrapper: sidebar + content live together */
+.sb-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--panel);
+}
+
+/* Sidebar */
+.sb-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border-soft);
+  transition: width 0.24s ease, transform 0.24s ease;
+  overflow: hidden;
+  /* Make sidebar fixed so it doesn't scroll with body */
+  position: fixed;
+  left: 0;
+  top: var(--system-header-height);
+  height: calc(100vh - var(--system-header-height));
+  z-index: 900; /* below system header (1000) */
+}
+
+.sb-layout.sb-collapsed .sb-sidebar {
+  width: 72px;
+}
+
+/* Sidebar header/brand */
+.sb-side-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sb-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+}
+
+.sb-brand-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sb-layout.sb-collapsed .sb-brand-text { display: none; }
+
+.sb-collapse-btn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+}
+
+/* Sidebar nav */
+.sb-nav {
+  padding: 8px 0;
+  overflow-y: auto; /* allow internal scroll if menu exceeds viewport */
+  height: calc(100% - 60px);
+}
+
+.sb-nav .nav-item { margin: 2px 8px; }
+.sb-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  color: var(--text);
+  border-radius: 10px;
+}
+.sb-nav .nav-link:hover { background: var(--hover-bg); }
+.sb-nav .nav-link.active { background: rgba(0,0,0,0.06); color: var(--text); }
+
+.nav-label { white-space: nowrap; }
+.sb-layout.sb-collapsed .nav-label { display: none; }
+
+/* Content wrapper */
+.sb-content {
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  /* Offset for fixed sidebar */
+  margin-left: 260px;
+}
+
+.sb-topbar {
+  display: none; /* Topbar removed system-wide */
+}
+
+.sb-topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sb-mobile-toggle {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+}
+
+.sb-page {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+/* Overlay on mobile */
+.sb-overlay { display: none; }
+
+@media (max-width: 991.98px) {
+  .sb-sidebar {
+    /* Keep fixed, but slide from off-screen on mobile */
+    transform: translateX(-100%);
+    top: var(--system-header-height);
+    box-shadow: 8px 0 24px rgba(0,0,0,.18);
+  }
+  .sb-layout.overlay-open .sb-sidebar { transform: translateX(0); }
+  .sb-overlay {
+    display: none;
+  }
+  .sb-layout.overlay-open .sb-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(2px);
+    z-index: 90;
+  }
+  /* On mobile, content should not reserve sidebar space */
+  .sb-content { margin-left: 0; }
+}
+
+/* Collapsed state: reduce reserved width for content offset */
+.sb-layout.sb-collapsed .sb-content {
+  margin-left: 72px;
+}
