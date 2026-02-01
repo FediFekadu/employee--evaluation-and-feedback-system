@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../../services/api';
+import LoadingSpinner from '../../../components/ErrorHandling/LoadingSpinner';
 
 function CollegeAdminAdmins() {
   const [departments, setDepartments] = useState([]);

@@ -90,6 +90,9 @@ function StudentEvaluations() {
   const [responses, setResponses] = useState({});
   const [submissionStatuses, setSubmissionStatuses] = useState({});
 
+  // Policy: enforce anonymous-only submissions (UI shows toggle as required)
+  const ANONYMOUS_ONLY = true;
+
   // Get department ID and student year level for connection and display
   const departmentId = typeof window !== 'undefined' ? Number(localStorage.getItem('department_id')) : null;
   const studentYearLevel = typeof window !== 'undefined' ? localStorage.getItem('year_level') : null;
@@ -388,9 +391,16 @@ function StudentEvaluations() {
       
       setEvalDetail(evaluationData);
       
-      // Default anonymous preference from localStorage if present
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('anonymous_preference') : null;
-      setAnonymous(stored === null ? true : stored === 'true');
+      // Default anonymous preference from localStorage if present, or enforce policy
+      if (ANONYMOUS_ONLY) {
+        setAnonymous(true);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('anonymous_preference', 'true');
+        }
+      } else {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('anonymous_preference') : null;
+        setAnonymous(stored === null ? true : stored === 'true');
+      }
       
     } catch (error) {
       // Enhanced error handling with specific messages
@@ -492,12 +502,17 @@ function StudentEvaluations() {
       if (q.type === 'rating') {
         let ratingVal = null;
         if (response?.rating !== undefined) {
-          const parsed = Number(response.rating);
-          if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
-            ratingVal = parsed;
+          // Treat null as NC (Not Applicable) without error
+          if (response.rating === null) {
+            ratingVal = null;
           } else {
-            // Flag out-of-range rating for pre-submit validation
-            nextErrors[q.id] = 'Rating must be between 1 and 5.';
+            const parsed = Number(response.rating);
+            if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+              ratingVal = parsed;
+            } else {
+              // Flag out-of-range rating for pre-submit validation
+              nextErrors[q.id] = 'Rating must be between 1 and 5 or NC.';
+            }
           }
         }
         responseArray.push({ 
@@ -943,30 +958,30 @@ function StudentEvaluations() {
                   </div>
                   
                   <div className="evaluation-info">
-                    <div className="info-grid info-chips">
-                      <div className="info-item">
-                        <label>Name of the Instructor</label>
-                        <span className="value-chip">{evalDetail.teacher?.name || 'N/A'}</span>
+                    {/* Horizontal metadata rows with grouped Year • Sem • AY */}
+                    <div className="info-rows">
+                      <div className="info-row">
+                        <div className="info-segment">
+                          <label>Instructor</label>
+                          <span>{evalDetail.teacher?.name || 'N/A'}</span>
+                        </div>
+                        <div className="info-segment">
+                          <label>Course Title</label>
+                          <span>{evalDetail.course?.title || 'N/A'}</span>
+                        </div>
+                        <div className="info-segment">
+                          <label>Department</label>
+                          <span>{evalDetail.department?.name || 'N/A'}</span>
+                        </div>
                       </div>
-                      <div className="info-item">
-                        <label>Course Title</label>
-                        <span className="value-chip">{evalDetail.course?.title || 'N/A'}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Department</label>
-                        <span className="value-chip">{evalDetail.department?.name || 'N/A'}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Year Level</label>
-                        <span className="value-chip">{formatYearLevel(studentYearLevel)}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Academic Year</label>
-                        <span className="value-chip">{evalDetail.academic_year || 'N/A'}</span>
-                      </div>
-                      <div className="info-item">
-                        <label>Semester</label>
-                        <span className="value-chip">{evalDetail.semester || 'N/A'}</span>
+                      <div className="info-row">
+                        <div className="info-segment meta">
+                          <span>{formatYearLevel(studentYearLevel)}</span>
+                          <span className="divider">•</span>
+                          <span>{String(evalDetail.semester || '').replace('Semester ', 'Sem ')}</span>
+                          <span className="divider">•</span>
+                          <span>{evalDetail.academic_year || 'N/A'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -978,13 +993,13 @@ function StudentEvaluations() {
 
                 {/* Instructions */}
                 <div className="evaluation-instructions">
-                  <h4>GENERAL DIRECTION</h4>
-                  <ol>
+                  <div className="instructions-header">GENERAL DIRECTION</div>
+                  <ul className="instructions-list">
                     <li>Read each evaluation point carefully</li>
                     <li>Rate the instructor's performance on each criterion</li>
                     <li>Use the scale: 1 (Very Low) to 5 (Very High), or NC (Not Applicable)</li>
                     <li>Your honest feedback helps improve teaching quality</li>
-                  </ol>
+                  </ul>
                 </div>
 
                 {/* Progress Bar */}
@@ -1005,21 +1020,24 @@ function StudentEvaluations() {
 
                 {/* Evaluation Form */}
                 <div className="evaluation-form">
-                  {/* Anonymous Option */}
+                  {/* Anonymous Option (attractive toggle, enforced if policy enabled) */}
                   <div className="anonymous-option">
-                    <label className="checkbox-label">
+                    <label className="switch-label" title={ANONYMOUS_ONLY ? 'Anonymous submission is required' : 'Toggle anonymous submission'}>
                       <input
                         type="checkbox"
                         checked={anonymous}
+                        disabled={ANONYMOUS_ONLY}
                         onChange={(e) => {
-                          setAnonymous(e.target.checked);
+                          const value = e.target.checked;
+                          setAnonymous(value);
                           if (typeof window !== 'undefined') {
-                            localStorage.setItem('anonymous_preference', String(e.target.checked));
+                            localStorage.setItem('anonymous_preference', String(value));
                           }
                         }}
                       />
-                      <span className="checkmark"></span>
-                      Submit anonymously
+                      <span className="switch" aria-hidden="true"><span className="switch-thumb"></span></span>
+                      <span className="switch-text">Submit anonymously</span>
+                      {ANONYMOUS_ONLY && <span className="switch-note">Required</span>}
                     </label>
                   </div>
 
@@ -1042,13 +1060,10 @@ function StudentEvaluations() {
                         <col style={{ width: '8.33%' }} />
                       </colgroup>
                       <thead>
-                        <tr className="table-header">
-                          <th rowSpan="2" className="criteria-header">
-                            EVALUATION CRITERIA የምዘና መስፈርት
+                        <tr className="top-header">
+                          <th className="criteria-header">
+                            Evaluation Criteria የምዘና መስፈርት
                           </th>
-                          <th colSpan="6" className="rating-header">Rating Scale</th>
-                        </tr>
-                         <tr className="scale-header">
                           {[1, 2, 3, 4, 5].map(rating => (
                             <th key={rating} className="scale-column">
                               <div className="scale-label">
@@ -1085,7 +1100,7 @@ function StudentEvaluations() {
                                     checked={responses[question.id]?.rating === (rating === 'nc' ? null : Number(rating))}
                                     onChange={() => handleRatingChange(question.id, rating)}
                                   />
-                                  <span className="radio-mark">○</span>
+                                  <span className="radio-mark" aria-hidden="true"></span>
                                 </label>
                               </td>
                             ))}

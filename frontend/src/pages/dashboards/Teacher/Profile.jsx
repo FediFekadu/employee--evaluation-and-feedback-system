@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import LoadingSpinner from '../../../components/ErrorHandling/LoadingSpinner';
 import api from '../../../services/api';
 
 function TeacherProfile() {

@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { NotificationToast } from '../../../components';
 import api from '../../../services/api';
 
 function PeerEvaluation() {
   const { peerEvaluationId } = useParams();
+  const navigate = useNavigate();
   const [teacherId, setTeacherId] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
   const [assignees, setAssignees] = useState([]);
@@ -13,9 +15,11 @@ function PeerEvaluation() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
+  const [notifications, setNotifications] = useState([]);
 
   // Responses keyed by question_id
   const [responses, setResponses] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     const tid = typeof window !== 'undefined' ? window.localStorage.getItem('teacher_id') : null;
@@ -59,6 +63,7 @@ function PeerEvaluation() {
   const handleRatingChange = (qid, value) => {
     const v = value === 'nc' ? null : Number(value);
     setResponses(prev => ({ ...prev, [qid]: { ...prev[qid], rating: v } }));
+    setFieldErrors(prev => { const n = { ...prev }; delete n[qid]; return n; });
   };
   const handleTextChange = (qid, value) => {
     setResponses(prev => ({ ...prev, [qid]: { ...prev[qid], text: value } }));
@@ -73,22 +78,74 @@ function PeerEvaluation() {
     setError('');
     setSubmitResult(null);
     try {
-      const payloadResponses = questions.map(q => {
+      const payloadResponses = [];
+      const requiredQuestions = [];
+      const nextFieldErrors = {};
+
+      questions.forEach(q => {
         const resp = responses[q.id] || {};
-        return {
-          question_id: q.id,
-          rating: q.type === 'rating' ? resp.rating ?? null : null,
-          text: q.type === 'text' ? (resp.text ?? '') : null,
-        };
+        if (q.type === 'rating') {
+          let ratingVal = null;
+          if (resp.rating !== undefined) {
+            if (resp.rating === null) {
+              ratingVal = null; // NC
+            } else {
+              const parsed = Number(resp.rating);
+              if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+                ratingVal = parsed;
+              } else {
+                nextFieldErrors[q.id] = 'Rating must be between 1 and 5 or NC.';
+              }
+            }
+          }
+          payloadResponses.push({ question_id: q.id, rating: ratingVal, text: null });
+          requiredQuestions.push(q.id);
+        } else {
+          const textVal = typeof resp.text === 'string' ? resp.text : '';
+          payloadResponses.push({ question_id: q.id, rating: null, text: textVal });
+        }
       });
+
+      let missingCount = 0;
+      requiredQuestions.forEach(qid => {
+        const resp = responses[qid];
+        if (!resp || resp.rating === undefined) {
+          nextFieldErrors[qid] = 'Please select a rating for this question.';
+          missingCount++;
+        }
+      });
+
+      if (Object.keys(nextFieldErrors).length > 0) {
+        setFieldErrors(nextFieldErrors);
+        // Show toast notification instead of hiding the form
+        const message = `Please complete ${missingCount} remaining question${missingCount > 1 ? 's' : ''} before submitting.`;
+        setNotifications(prev => ([
+          ...prev,
+          { id: Date.now(), type: 'warning', title: 'Incomplete', message }
+        ]));
+        setSubmitting(false);
+        return;
+      }
+
       const res = await api.post(`/peer-evaluations/${peerEvaluationId}/responses`, {
         evaluator_teacher_id: Number(teacherId),
         responses: payloadResponses,
       });
       setSubmitResult(res.data);
+      // Redirect back to list showing submitted status
+      navigate('/teacher/peer-evaluations', { state: { justSubmitted: true } });
     } catch (e) {
       console.error('Failed to submit peer responses', e);
-      setError(e.response?.data?.message || 'Submission failed.');
+      // If already submitted, treat as success and go back to list
+      if (e?.response?.status === 409) {
+        navigate('/teacher/peer-evaluations', { state: { alreadySubmitted: true } });
+      } else {
+        const msg = e.response?.data?.message || 'Submission failed.';
+        setNotifications(prev => ([
+          ...prev,
+          { id: Date.now(), type: 'error', title: 'Submission Error', message: msg }
+        ]));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -121,8 +178,14 @@ function PeerEvaluation() {
             </div>
           )}
 
-          {/* Rating questions rendered as table grid, reusing student styles */}
+          {/* Rating questions rendered as table grid, aligned to student styles */}
           <div className="evaluation-table-container">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px' }}>
+              <div style={{ fontWeight: 600 }}>Evaluation Criteria</div>
+              <div style={{ fontSize: '0.9em', color: 'var(--muted)' }}>
+                Total Questions: {questions.filter(q => q.type === 'rating').length}
+              </div>
+            </div>
             <table className="evaluation-table">
               <colgroup>
                 <col style={{ width: '50%' }} />
@@ -134,12 +197,9 @@ function PeerEvaluation() {
                 <col style={{ width: '8.33%' }} />
               </colgroup>
               <thead>
-                <tr className="table-header">
-                  <th rowSpan="2" className="criteria-header">EVALUATION CRITERIA የምዘና መስፈርት</th>
-                  <th colSpan="6" className="rating-header">Rating Scale</th>
-                </tr>
-                <tr className="scale-header">
-                  {[1,2,3,4,5].map(r => (
+                <tr className="top-header">
+                  <th className="criteria-header">Evaluation Criteria የምዘና መስፈርት</th>
+                  {[1, 2, 3, 4, 5].map(r => (
                     <th key={r} className="scale-column">
                       <div className="scale-label">
                         <div className="scale-number">{r}</div>
@@ -161,6 +221,9 @@ function PeerEvaluation() {
                     <td className="criteria-cell">
                       <div className="criteria-number">{idx + 1}</div>
                       <div className="criteria-text">{q.text || q.question || 'Untitled question'}</div>
+                      {fieldErrors[q.id] && (
+                        <div className="error-message">{fieldErrors[q.id]}</div>
+                      )}
                     </td>
                     {[1, 2, 3, 4, 5, 'nc'].map((rating) => (
                       <td key={rating} className="rating-cell">
@@ -172,7 +235,7 @@ function PeerEvaluation() {
                             checked={(responses[q.id]?.rating === (rating === 'nc' ? null : Number(rating)))}
                             onChange={(e) => handleRatingChange(q.id, e.target.value)}
                           />
-                          <span className="radio-mark">○</span>
+                          <span className="radio-mark" aria-hidden="true"></span>
                         </label>
                       </td>
                     ))}
@@ -220,6 +283,15 @@ function PeerEvaluation() {
               <p>Computed score: <strong>{submitResult.score}%</strong></p>
             </div>
           )}
+
+          {/* Toast notifications for inline feedback */}
+          <NotificationToast
+            notifications={notifications}
+            onDismiss={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+            position="bottom-right"
+            autoHide={true}
+            hideDelay={5000}
+          />
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
 
 function PeerEvaluationsList() {
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [evaluations, setEvaluations] = useState([]);
@@ -59,11 +60,23 @@ function PeerEvaluationsList() {
       <div className="dashboard-header">
         <div>
           <h1>Peer Evaluations</h1>
-          <p>Review and submit evaluations assigned to you.</p>
+          <p>Review and complete your peer evaluations.</p>
         </div>
       </div>
 
       <div className="dashboard-section">
+        {location.state?.justSubmitted && (
+          <div className="success-state">
+            <span className="success-icon">✓</span>
+            <span>Submitted successfully — thank you for your feedback.</span>
+          </div>
+        )}
+        {location.state?.alreadySubmitted && (
+          <div className="info-state">
+            <span className="info-icon">ℹ️</span>
+            <span>Already submitted — you can review your evaluations below.</span>
+          </div>
+        )}
         {evaluations.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">📝</span>
@@ -81,11 +94,21 @@ function PeerEvaluationsList() {
                 </div>
                 
                 <div className="card-content">
-                  <div className="teacher-avatar-circle">
-                    {ev?.teacher?.name ? 
-                      ev.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() : 
-                      'UN'
-                    }
+                  <div className="teacher-avatar-circle" title={ev?.teacher?.name || 'Teacher'}>
+                    {ev?.teacher?.photo_url || ev?.teacher?.profile_photo_url ? (
+                      <img
+                        src={ev?.teacher?.photo_url || ev?.teacher?.profile_photo_url}
+                        alt={ev?.teacher?.name || 'Teacher'}
+                      />
+                    ) : (
+                      (ev?.teacher?.name
+                        ? ev.teacher.name
+                            .split(' ')
+                            .map(n => n[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'UN')
+                    )}
                   </div>
                   
                   <h3 className="teacher-title">{ev?.teacher?.name || 'Assigned Teacher'}</h3>
@@ -93,21 +116,20 @@ function PeerEvaluationsList() {
                   
                   <div className="card-meta">
                     <div className="meta-item">
-                      <span>Opened: {ev?.opened_at ? new Date(ev.opened_at).toLocaleDateString() : '—'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span>Status: {ev.submitted ? 'Submitted' : 'Open'}</span>
+                      <span>
+                        Opened on {ev?.opened_at ? new Date(ev.opened_at).toLocaleDateString() : '—'} • Status: {ev.submitted ? 'Submitted' : 'Open'}
+                      </span>
                     </div>
                   </div>
                   
                   <div className="card-action">
                     {ev.submitted ? (
                       <div className="status-pill submitted">
-                        ✓ Already Submitted
+                        ✓ Submitted
                       </div>
                     ) : (
                       <Link className="evaluate-btn" to={`/teacher/peer-evaluations/${ev.id}`}>
-                        Evaluate
+                        Start Evaluation
                       </Link>
                     )}
                   </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import LoadingSpinner from '../../../components/ErrorHandling/LoadingSpinner';
 import api from '../../../services/api';
 
 function TeacherCourses() {
@@ -42,15 +43,15 @@ function TeacherCourses() {
             <p style={{ color: 'var(--muted)' }}>No course assignments yet.</p>
           )}
           {courses.map((c) => (
-            <li key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid #eee' }}>
+            <li key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border-soft)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <strong>{c.code}</strong> — {c.title}
                   <div style={{ color: 'var(--muted)' }}>{c?.department?.name ? `Department: ${c.department.name}` : ''}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div>Year: {c.pivot?.year_level ?? 'N/A'}</div>
-                  <div>Semester: {c.pivot?.semester ?? 'N/A'}</div>
+                  <div>Year: {c.pivot?.year_level ?? c.year_level ?? 'N/A'}</div>
+                  <div>Semester: {c.pivot?.semester ?? c.semester ?? 'N/A'}</div>
                 </div>
               </div>
             </li>
