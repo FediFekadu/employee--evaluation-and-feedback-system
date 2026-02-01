@@ -12,8 +12,8 @@
   --panel: #0b1220; /* slightly lighter */
   --text: #e5e7eb; /* gray-200 */
   --muted: #9ca3af; /* gray-400 */
-  --primary: #22d3ee; /* cyan-400 */
-  --primary-dark: #0891b2; /* cyan-700 */
+  --primary: #0d6efd; /* brand blue */
+  --primary-dark: #0b5ed7; /* darker brand blue */
   --accent: #0d6efd; /* violet-400 */
   /* UI tokens */
   --border-soft: rgba(255,255,255,0.08);
@@ -2177,10 +2177,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  background: linear-gradient(135deg, var(--text), var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text);
 }
 
 .dashboard-header p {
@@ -4598,10 +4595,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 
 /* Improved Typography */
 .department-dashboard h1 {
-  background: linear-gradient(135deg, var(--text), var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text);
   font-weight: 700;
 }
 
@@ -5445,10 +5439,7 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  background: linear-gradient(135deg, var(--text), var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text);
 }
 
 .evaluations-header p {

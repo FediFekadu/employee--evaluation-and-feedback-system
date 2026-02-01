@@ -186,8 +186,8 @@ function CollegeAdminEvaluations() {
       <div className="card" style={{ marginTop: 16 }}>
         <h4>Active Evaluations</h4>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>
-            Loading evaluations...
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <LoadingSpinner size="small" showMessage={false} showElapsed={false} />
           </div>
         ) : evaluations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>

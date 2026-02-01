@@ -141,7 +141,6 @@ function DepartmentCourses() {
       <div className="courses-dashboard">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading courses...</p>
         </div>
       </div>
     );
@@ -288,7 +287,38 @@ function DepartmentCourses() {
                         <div className="instructors-list">
                           {(course.teachers || []).map((teacher) => (
                             <div key={`${course.id}-${teacher.id}`} className="instructor-item">
-                              <span className="instructor-name">{teacher.name}</span>
+                              <span className="instructor-name" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <span
+                                  className="instructor-avatar"
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    marginRight: 6,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: 'var(--neutral-200)',
+                                    overflow: 'hidden',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {teacher.photo_url ? (
+                                    <img
+                                      src={teacher.photo_url}
+                                      alt={teacher.name}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    (teacher.name || 'U')
+                                      .split(' ')
+                                      .map(n => n[0])
+                                      .join('')
+                                      .toUpperCase()
+                                  )}
+                                </span>
+                                {teacher.name}
+                              </span>
                               <span className="instructor-details">
                                 Year {teacher?.pivot?.year_level || '-'} • {teacher?.pivot?.semester || '-'}
                               </span>

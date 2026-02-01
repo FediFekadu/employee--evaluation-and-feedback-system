@@ -427,6 +427,35 @@ function InteractiveTeacherRankings({
         
         <td className="teacher-name-column">
           <div className="teacher-info">
+            <div
+              className="teacher-avatar"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                marginRight: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'var(--neutral-200)',
+                overflow: 'hidden',
+                fontWeight: 600
+              }}
+            >
+              {teacher.photo_url ? (
+                <img
+                  src={teacher.photo_url}
+                  alt={teacher.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                (teacher.name || 'U')
+                  .split(' ')
+                  .map(n => n[0])
+                  .join('')
+                  .toUpperCase()
+              )}
+            </div>
             <div className="teacher-name font-medium">{teacher.name}</div>
             {teacher.title && (
               <div className="teacher-title text-caption">{teacher.title}</div>
@@ -543,7 +572,6 @@ function InteractiveTeacherRankings({
       <div className={`interactive-teacher-rankings ${className}`}>
         <LoadingState 
           type="skeleton"
-          message="Loading teacher rankings..."
           size="large"
         />
       </div>

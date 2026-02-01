@@ -667,8 +667,10 @@ function Reports() {
         <div className="dashboard-header">
           <div>
             <h1>Reports</h1>
-            <p>Loading department reports...</p>
           </div>
+        </div>
+        <div className="loading-container" aria-busy="true" aria-live="polite">
+          <LoadingSpinner size="large" showMessage={false} showElapsed={false} />
         </div>
       </div>
     );
@@ -738,8 +740,9 @@ function Reports() {
           {/* Loading indicator for page-level operations */}
           {isLoading('load_department') && (
             <LoadingSpinner 
-              size="small" 
-              message="Loading department data..." 
+              size="small"
+              showMessage={false}
+              showElapsed={false}
             />
           )}
         </div>
@@ -1290,6 +1293,35 @@ function Reports() {
                         </div>
                         <div className="table-cell teacher-cell">
                           <div className="teacher-info">
+                            <div
+                              className="teacher-avatar"
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                marginRight: 8,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: 'var(--neutral-200)',
+                                overflow: 'hidden',
+                                fontWeight: 600
+                              }}
+                            >
+                              {teacher.photo_url || teacher.profile_photo_url ? (
+                                <img
+                                  src={teacher.photo_url || teacher.profile_photo_url}
+                                  alt={teacher.teacher_name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                (teacher.teacher_name || 'U')
+                                  .split(' ')
+                                  .map(n => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                              )}
+                            </div>
                             <div className="teacher-name">{teacher.teacher_name}</div>
                             <div className="teacher-id">ID: {teacher.teacher_id}</div>
                           </div>
@@ -1392,10 +1424,41 @@ function Reports() {
                     <div className="analysis-card">
                       <h4>Top Performers</h4>
                       <div className="performer-list">
-                        {departmentAggregation.comparative_analysis.top_performers.length > 0 ? (
-                          departmentAggregation.comparative_analysis.top_performers.map((teacher) => (
-                            <div key={teacher.teacher_id} className="performer-item">
-                              <span className="performer-name">{teacher.teacher_name}</span>
+                          {departmentAggregation.comparative_analysis.top_performers.length > 0 ? (
+                            departmentAggregation.comparative_analysis.top_performers.map((teacher) => (
+                              <div key={teacher.teacher_id} className="performer-item">
+                              <span className="performer-name" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <span
+                                  className="teacher-avatar"
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    marginRight: 6,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: 'var(--neutral-200)',
+                                    overflow: 'hidden',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {teacher.photo_url || teacher.profile_photo_url ? (
+                                    <img
+                                      src={teacher.photo_url || teacher.profile_photo_url}
+                                      alt={teacher.teacher_name}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    (teacher.teacher_name || 'U')
+                                      .split(' ')
+                                      .map(n => n[0])
+                                      .join('')
+                                      .toUpperCase()
+                                  )}
+                                </span>
+                                {teacher.teacher_name}
+                              </span>
                               <span className="performer-score">{teacher.average_performance_score.toFixed(1)}%</span>
                             </div>
                           ))
@@ -1408,10 +1471,41 @@ function Reports() {
                     <div className="analysis-card">
                       <h4>Needs Improvement</h4>
                       <div className="performer-list">
-                        {departmentAggregation.comparative_analysis.improvement_needed.length > 0 ? (
-                          departmentAggregation.comparative_analysis.improvement_needed.map((teacher) => (
-                            <div key={teacher.teacher_id} className="performer-item">
-                              <span className="performer-name">{teacher.teacher_name}</span>
+                          {departmentAggregation.comparative_analysis.improvement_needed.length > 0 ? (
+                            departmentAggregation.comparative_analysis.improvement_needed.map((teacher) => (
+                              <div key={teacher.teacher_id} className="performer-item">
+                              <span className="performer-name" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <span
+                                  className="teacher-avatar"
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    marginRight: 6,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: 'var(--neutral-200)',
+                                    overflow: 'hidden',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {teacher.photo_url || teacher.profile_photo_url ? (
+                                    <img
+                                      src={teacher.photo_url || teacher.profile_photo_url}
+                                      alt={teacher.teacher_name}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    (teacher.teacher_name || 'U')
+                                      .split(' ')
+                                      .map(n => n[0])
+                                      .join('')
+                                      .toUpperCase()
+                                  )}
+                                </span>
+                                {teacher.teacher_name}
+                              </span>
                               <span className="performer-score">{teacher.average_performance_score.toFixed(1)}%</span>
                             </div>
                           ))
@@ -1463,7 +1557,7 @@ function Reports() {
             </>
           ) : (
             <div className="loading-placeholder">
-              <p>Loading department aggregation data...</p>
+              <LoadingSpinner size="medium" showMessage={false} showElapsed={false} />
             </div>
           )}
         </div>

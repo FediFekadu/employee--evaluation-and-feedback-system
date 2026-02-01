@@ -224,7 +224,7 @@ function EnhancedPerformanceInsights({
   if (loading) {
     return (
       <div className={`enhanced-performance-insights loading ${className}`}>
-        <LoadingSpinner size="large" message="Loading enhanced performance insights..." />
+        <LoadingSpinner size="large" showMessage={false} showElapsed={false} />
       </div>
     );
   }

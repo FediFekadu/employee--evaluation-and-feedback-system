@@ -31,6 +31,7 @@ function DepartmentCoursesAndInstructors() {
 
   // Instructor-related state
   const [newInstructor, setNewInstructor] = useState({ name: '', email: '', title: '' });
+  const [photoFile, setPhotoFile] = useState(null);
   const [instructorSaving, setInstructorSaving] = useState(false);
   const [instructorMessage, setInstructorMessage] = useState('');
   const [instructorSearchTerm, setInstructorSearchTerm] = useState('');
@@ -225,21 +226,32 @@ function DepartmentCoursesAndInstructors() {
     setInstructorSaving(true);
     setInstructorMessage('');
     try {
-      const res = await api.post('/teachers', {
-        name: newInstructor.name,
-        email: newInstructor.email,
-        title: newInstructor.title || undefined,
-        department_id: deptId,
-      });
+      const fd = new FormData();
+      fd.append('name', newInstructor.name);
+      fd.append('email', newInstructor.email);
+      if (newInstructor.title) fd.append('title', newInstructor.title);
+      fd.append('department_id', String(deptId));
+      if (photoFile) fd.append('photo', photoFile);
+      const res = await api.post('/teachers', fd);
       setDepartment((prev) => ({
         ...prev,
         teachers: [res.data, ...(prev?.teachers || [])],
       }));
       setNewInstructor({ name: '', email: '', title: '' });
+      setPhotoFile(null);
       const pwd = res.data?.default_password;
       setInstructorMessage(pwd ? `✅ Instructor added. Default password: ${pwd}` : '✅ Instructor added successfully');
     } catch (e) {
-      setInstructorMessage('❌ Failed to add instructor');
+      const serverMsg = e?.response?.data?.message;
+      const errors = e?.response?.data?.errors;
+      let detail = '';
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey && errors[firstKey]?.length) detail = ` (${errors[firstKey][0]})`;
+      } else if (serverMsg) {
+        detail = ` (${serverMsg})`;
+      }
+      setInstructorMessage(`❌ Failed to add instructor${detail}`);
     } finally {
       setInstructorSaving(false);
     }
@@ -268,7 +280,6 @@ function DepartmentCoursesAndInstructors() {
       <div className="courses-dashboard">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading courses and instructors...</p>
         </div>
       </div>
     );
@@ -397,33 +408,79 @@ function DepartmentCoursesAndInstructors() {
                 </button>
               </div>
             ) : (
-              <div className="courses-list">
-                {filteredCourses.map((course) => (
-                  <div key={course.id} className="course-list-item">
-                    <div className="course-item-header">
-                      <div className="course-icon">
-                        📚
-                      </div>
-                      <div className="course-main-info">
-                        <div className="course-title-row">
-                          <h3 className="course-title">{course.title}</h3>
-                          <span className="course-code-badge">{course.code}</span>
+              <div className="courses-list compact-rows">
+                {filteredCourses.map((course) => {
+                  const teachers = course.teachers || [];
+                  const visibleTeachers = teachers.slice(0, 3);
+                  const remainingCount = Math.max(0, teachers.length - visibleTeachers.length);
+                  return (
+                    <div
+                      key={course.id}
+                      className="course-row"
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto 1fr auto',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '8px 10px',
+                        border: '1px solid var(--neutral-200)',
+                        borderRadius: 8,
+                        marginBottom: 8,
+                        background: 'var(--neutral-50)'
+                      }}
+                    >
+                      <div className="course-icon" style={{ fontSize: 18, lineHeight: '18px' }}>📚</div>
+
+                      <div className="course-main-compact" style={{ minWidth: 0 }}>
+                        <div className="title-row" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <h3 className="course-title" style={{ fontSize: 14, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{course.title}</h3>
+                          <span className="course-code-badge" style={{ fontSize: 11, padding: '2px 6px', borderRadius: 10, background: 'var(--neutral-200)', color: 'var(--text-muted)' }}>{course.code}</span>
                         </div>
-                        <div className="course-meta-row">
-                          {course.year_level && <span className="meta-info">Year {course.year_level}</span>}
-                          {course.semester && <span className="meta-info">{course.semester}</span>}
-                          <span className="instructor-count">{(course.teachers || []).length} Instructor{(course.teachers || []).length !== 1 ? 's' : ''}</span>
+                        <div className="meta-row" style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                          {course.year_level && <span>Year {course.year_level}</span>}
+                          {course.year_level && course.semester && <span style={{ margin: '0 6px' }}>•</span>}
+                          {course.semester && <span>{course.semester}</span>}
+                        </div>
+                        <div className="teachers-row" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          {visibleTeachers.length === 0 ? (
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No instructors assigned</span>
+                          ) : (
+                            visibleTeachers.map((teacher) => (
+                              <div key={`${course.id}-${teacher.id}`} className="instructor-chip" style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--neutral-200)', borderRadius: 12, padding: '2px 6px', gap: 6 }}>
+                                <span
+                                  className="avatar"
+                                  style={{ width: 18, height: 18, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--neutral-200)', overflow: 'hidden', fontSize: 11, fontWeight: 600 }}
+                                >
+                                  {teacher.photo_url ? (
+                                    <img src={teacher.photo_url} alt={teacher.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    (teacher.name || 'U')
+                                      .split(' ')
+                                      .map(n => n[0])
+                                      .join('')
+                                      .toUpperCase()
+                                  )}
+                                </span>
+                                <span className="name" style={{ fontSize: 12, whiteSpace: 'nowrap', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{teacher.name}</span>
+                              </div>
+                            ))
+                          )}
+                          {remainingCount > 0 && (
+                            <span className="more-chip" style={{ fontSize: 12, color: 'var(--text-muted)' }}>+{remainingCount} more</span>
+                          )}
                         </div>
                       </div>
-                      <div className="course-actions">
-                        <span className="status-badge active">Active</span>
-                        <button className="action-btn" onClick={() => setActiveTab('assign')}>Assign</button>
-                        <button className="action-btn" onClick={() => {
+
+                      <div className="course-actions compact" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span className="status-badge active" style={{ fontSize: 11, padding: '2px 6px' }}>Active</span>
+                        <button className="action-btn" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => setActiveTab('assign')}>Assign</button>
+                        <button className="action-btn" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => {
                           setAssignForm(prev => ({ ...prev, course_id: String(course.id) }));
                           setActiveTab('assign');
                         }}>Quick Assign</button>
                         <button 
                           className="action-btn remove" 
+                          style={{ fontSize: 12, padding: '4px 8px' }}
                           onClick={() => {
                             if ((course.teachers || []).length > 0) {
                               setRemoveForm(prev => ({ ...prev, course_id: String(course.id) }));
@@ -437,48 +494,8 @@ function DepartmentCoursesAndInstructors() {
                         </button>
                       </div>
                     </div>
-                    
-                    {course.description && (
-                      <div className="course-description">
-                        {course.description}
-                      </div>
-                    )}
-                    
-                    <div className="course-instructors-section">
-                      <div className="section-label">Assigned Instructors</div>
-                      {(course.teachers || []).length === 0 ? (
-                        <div className="no-instructors">No instructors assigned</div>
-                      ) : (
-                        <div className="instructors-list">
-                          {(course.teachers || []).map((teacher) => (
-                            <div key={`${course.id}-${teacher.id}`} className="instructor-item">
-                              <div className="instructor-info">
-                                <span className="instructor-name">{teacher.name}</span>
-                                <span className="instructor-details">
-                                  Year {teacher?.pivot?.year_level || '-'} • {teacher?.pivot?.semester || '-'}
-                                </span>
-                              </div>
-                              <button 
-                                className="remove-instructor-btn"
-                                onClick={() => {
-                                  setRemoveForm({
-                                    course_id: String(course.id),
-                                    teacher_id: String(teacher.id),
-                                    semester: teacher?.pivot?.semester || 'Semester I'
-                                  });
-                                  setActiveTab('remove');
-                                }}
-                                title="Remove this instructor"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -526,7 +543,11 @@ function DepartmentCoursesAndInstructors() {
                   <div key={instructor.id} className={`instructor-card compact ${expandedId === instructor.id ? 'expanded' : ''}`}>
                     <div className="card-top">
                       <div className="instructor-avatar small">
-                        {instructor.name.charAt(0).toUpperCase()}
+                        {instructor.photo_url ? (
+                          <img src={instructor.photo_url} alt={instructor.name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          instructor.name.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div className="instructor-info">
                         <div className="name-row">
@@ -793,6 +814,16 @@ function DepartmentCoursesAndInstructors() {
                 />
                 <small className="form-hint">Optional: Academic rank or position title</small>
               </div>
+              <div className="form-group full-width">
+                <label className="form-label">Instructor Photo</label>
+                <input
+                  className="form-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                />
+                <small className="form-hint">Optional: Upload a profile picture (JPEG/PNG/WebP/GIF, up to 8 MB)</small>
+              </div>
             </div>
             
             <div className="form-actions">
@@ -800,6 +831,7 @@ function DepartmentCoursesAndInstructors() {
                 className="dept-btn dept-btn-ghost"
                 onClick={() => {
                   setNewInstructor({ name: '', email: '', title: '' });
+                  setPhotoFile(null);
                   setInstructorMessage('');
                 }}
               >

@@ -1829,8 +1829,7 @@ function DepartmentEvaluations() {
               </div>
               {hodTemplateLoading ? (
                 <div style={{ textAlign: 'center', padding: 40 }}>
-                  <div style={{ fontSize: '18px', marginBottom: 8 }}>🔄</div>
-                  <p style={{ color: 'var(--muted)' }}>Loading HOD evaluation template...</p>
+                  <LoadingSpinner size="small" showMessage={false} showElapsed={false} />
                 </div>
               ) : (
                 <DepartmentTemplateManager
@@ -2063,7 +2062,9 @@ function DepartmentEvaluations() {
             </select>
           </label>
         </div>
-        {loading && <p>Loading evaluations…</p>}
+        {loading && (
+          <div className="loading-state"><div className="loading-spinner"></div></div>
+        )}
         {!loading && evaluations.length === 0 && <p style={{ color: 'var(--muted)' }}>No evaluations for this session.</p>}
         {!loading && evaluations.length > 0 && (
           (() => {

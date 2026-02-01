@@ -396,7 +396,7 @@ function VisualAnalytics({
   if (loading) {
     return (
       <div className={`visual-analytics loading ${className}`} style={{ height }}>
-        <LoadingSpinner size="large" message="Loading visual analytics..." />
+        <LoadingSpinner size="large" showMessage={false} showElapsed={false} />
       </div>
     );
   }

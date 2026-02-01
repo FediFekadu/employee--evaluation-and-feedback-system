@@ -34,7 +34,7 @@ function TeacherCourses() {
     <div className="card">
       <h3>Assigned Courses</h3>
       <p style={{ color: 'var(--muted)' }}>Your current course assignments.</p>
-      {loading && <p>Loading…</p>}
+      {loading && <LoadingSpinner size="small" showMessage={false} showElapsed={false} />}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!loading && !error && (
         <ul style={{ listStyle: 'none', paddingLeft: 0, marginTop: 8 }}>

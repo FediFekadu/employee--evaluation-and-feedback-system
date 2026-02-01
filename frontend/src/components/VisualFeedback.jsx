@@ -462,24 +462,11 @@ export function UpdatePulse({ children, isUpdating = false }) {
     <div 
       className="update-pulse"
       style={{
-        animation: isUpdating ? 'pulse 1.5s ease-in-out infinite' : 'none',
+        animation: 'none',
         transition: 'all 0.3s ease'
       }}
     >
       {children}
-      
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.7;
-            transform: scale(1.02);
-          }
-        }
-      `}</style>
     </div>
   );
 }

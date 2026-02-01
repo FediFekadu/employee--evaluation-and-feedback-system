@@ -448,7 +448,6 @@ function EnhancedVisualAnalytics({
       <div className={`enhanced-visual-analytics ${className}`} style={{ height }}>
         <LoadingState 
           type="skeleton"
-          message="Loading visual analytics..."
           size="large"
         />
       </div>

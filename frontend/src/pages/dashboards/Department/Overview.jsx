@@ -108,7 +108,7 @@ function DepartmentOverview() {
       description: 'Start new teacher evaluation',
       icon: '📝',
       color: '#3b82f6',
-      link: `/department/${id}/evaluations`,
+      link: `/department/${id}/manage-evaluations`,
       badge: evaluations.filter(e => !e.closed_at).length || null
     },
     {
@@ -124,7 +124,7 @@ function DepartmentOverview() {
       description: 'View and edit courses',
       icon: '📚',
       color: '#10b981',
-      link: `/department/${id}/courses`,
+      link: `/department/${id}/courses-instructors`,
       badge: department?.courses?.length || null
     },
     {
@@ -140,12 +140,22 @@ function DepartmentOverview() {
       description: 'Instructor management',
       icon: '👥',
       color: '#8b5cf6',
-      link: `/department/${id}/instructors`,
+      link: `/department/${id}/courses-instructors`,
       badge: department?.teachers?.length || null
     }
   ];
 
   const recentEvaluations = evaluations.slice(0, 5);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
 
   if (loading) {
     return (
@@ -253,7 +263,7 @@ function DepartmentOverview() {
         <div className="dashboard-section">
           <h2>Recent Evaluations</h2>
           {evalLoading ? (
-            <p>Loading evaluations...</p>
+            <div className="loading-state"><div className="loading-spinner"></div></div>
           ) : recentEvaluations.length > 0 ? (
             <div className="evaluations-list">
               {recentEvaluations.map((evaluation) => (
@@ -261,14 +271,14 @@ function DepartmentOverview() {
                   <div className="evaluation-info">
                     <h4>{evaluation.course?.title}</h4>
                     <p className="evaluation-instructor">{evaluation.teacher?.name}</p>
-                    <p className="evaluation-due">Opened: {evaluation.opened_at}</p>
+                    <p className="evaluation-due">Opened: {formatDate(evaluation.opened_at)}</p>
                   </div>
                   <div className={`evaluation-status ${evaluation.closed_at ? 'completed' : 'pending'}`}>
                     {evaluation.closed_at ? 'Completed' : 'Active'}
                   </div>
                 </div>
               ))}
-              <Link to={`/department/${id}/evaluations`} className="view-all-link">
+              <Link to={`/department/${id}/manage-evaluations`} className="view-all-link">
                 View All Evaluations →
               </Link>
             </div>
@@ -277,7 +287,7 @@ function DepartmentOverview() {
               <div className="empty-icon">📝</div>
               <h3>No Evaluations Yet</h3>
               <p>Start by creating your first teacher evaluation</p>
-              <Link to={`/department/${id}/evaluations`} className="dept-btn dept-btn-primary">
+              <Link to={`/department/${id}/manage-evaluations`} className="dept-btn dept-btn-primary">
                 Create Evaluation
               </Link>
             </div>

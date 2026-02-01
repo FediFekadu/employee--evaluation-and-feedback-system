@@ -764,58 +764,30 @@ function StudentEvaluations() {
         </div>
         <p>Evaluate your instructors to help improve teaching quality</p>
         
-        {/* Connection Status Display */}
-        <div className="connection-status">
-          <div className="status-indicator">
-            <span className={`status-icon ${connectionStatus}`}>
-              {connectionStatus === 'connected' && '🟢'}
-              {connectionStatus === 'connecting' && '🟡'}
-              {connectionStatus === 'error' && '🔴'}
-              {connectionStatus === 'polling' && '🔄'}
-            </span>
-            <span className={`status-text ${connectionStatus}`}>
-              {connectionStatus === 'connected' && 'Live Updates'}
-              {connectionStatus === 'connecting' && 'Connecting...'}
-              {connectionStatus === 'error' && 'Connection Lost'}
-              {connectionStatus === 'polling' && 'Polling Mode'}
-            </span>
-            {lastUpdate && (
-              <span className="last-update">
-                Last update: {lastUpdate.toLocaleTimeString()}
-              </span>
-            )}
-            {connectionStatus === 'error' && (
-              <button className="retry-btn" onClick={reconnect}>
-                Retry Connection
-              </button>
-            )}
-          </div>
-        </div>
+        {/* Removed live/last update banner per UX request */}
         
         {/* Loading indicator for page-level operations */}
         {isLoading('load_evaluations') && (
           <LoadingSpinner 
-            size="small" 
-            message="Loading evaluations..." 
+            size="small"
+            showMessage={false}
+            showElapsed={false}
           />
         )}
       </div>
 
       {/* Evaluations List */}
       <div className="evaluations-grid">
-        {evaluations.length === 0 ? (
+        {isLoading('load_evaluations') ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+          </div>
+        ) : evaluations.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📝</div>
             <h3>No Evaluations Available</h3>
             <p>There are no open evaluations for your courses at this time.</p>
-            {process.env.NODE_ENV === 'development' && (
-              <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f0f8ff', borderRadius: '8px', fontSize: '0.9em' }}>
-                <strong>Debug Info:</strong>
-                <br />Department ID: {departmentId || 'Not set'}
-                <br />Student ID: {typeof window !== 'undefined' ? localStorage.getItem('student_db_id') : 'Not set'}
-                <br />Available departments with evaluations: 1790, 1802, 2215
-              </div>
-            )}
+            {/* Debug info panel removed per UX request */}
           </div>
         ) : (
           evaluations.map((evaluation) => {
@@ -844,54 +816,87 @@ function StudentEvaluations() {
             const isNotYetOpen = !isEvaluationAvailable(evaluation.opened_at, null, currentDate); // Has not opened yet
             
             return (
-              <div key={evaluation.id} className="ui-card evaluation-card">
+              <div
+                key={evaluation.id}
+                className="ui-card evaluation-card"
+                role="button"
+                tabIndex={evaluationAvailable && !isSubmitted ? 0 : -1}
+                onClick={() => {
+                  if (!isSubmitted && evaluationAvailable) {
+                    openEval(evaluation.id);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isSubmitted && evaluationAvailable) {
+                    openEval(evaluation.id);
+                  }
+                }}
+                style={{ cursor: (!isSubmitted && evaluationAvailable) ? 'pointer' : 'default' }}
+              >
                 {/* Status Indicator Bar */}
                 <div className={`status-bar ${isSubmitted ? 'completed' : !evaluationAvailable ? 'closed' : 'open'}`}></div>
-                
-                {/* Card Icon */}
-                <div className="card-icon">
-                  {isSubmitted ? '✅' : !evaluationAvailable ? (isClosed ? '🔒' : '⏳') : '📝'}
+
+                {/* Professional Header with Instructor Avatar */}
+                <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px 0' }}>
+                  <div className="teacher-avatar" style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: 'var(--neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 11 }}>
+                    {evaluation.teacher?.photo_url ? (
+                      <img src={evaluation.teacher.photo_url} alt={evaluation.teacher?.name || 'Instructor'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      (evaluation.teacher?.name || 'U')
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="course-code-chip" style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', background: 'var(--neutral-100)', border: '1px solid var(--border-soft)', borderRadius: 6, padding: '1px 6px' }}>
+                        {evaluation.course?.code || 'N/A'}
+                      </span>
+                      <span className="status-chip" style={{ fontSize: 11, fontWeight: 600, color: isSubmitted ? '#16a34a' : (!evaluationAvailable ? (isClosed ? '#ef4444' : '#a3a3a3') : '#3b82f6') }}>
+                        {isSubmitted ? '✅ Submitted' : !evaluationAvailable ? (isClosed ? '🔒 Closed' : '⏳ Upcoming') : '🟢 Open'}
+                      </span>
+                    </div>
+                    <h3 className="card-title" style={{ margin: '2px 0 0', fontSize: '0.95rem', lineHeight: 1.2 }}>
+                      {evaluation.course?.title || 'Course Evaluation'}
+                    </h3>
+                    <div className="instructor-row" style={{ marginTop: 0, fontSize: 12, color: 'var(--muted)' }}>
+                      <strong style={{ fontWeight: 600 }}>Instructor:</strong> {evaluation.teacher?.name || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Description (single-row ultra compact) */}
+                <div className="card-description" style={{ padding: '6px 8px 8px', fontSize: 12 }}>
+                  <div className="meta-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                    <span>{formatYearLevel(studentYearLevel)}</span>
+                    <span style={{ opacity: 0.6 }}>•</span>
+                    <span>{String(evaluation.semester || '').replace('Semester ', 'Sem ')}</span>
+                    <span style={{ opacity: 0.6 }}>•</span>
+                    <span>AY {evaluation.academic_year}</span>
+                    <span style={{ opacity: 0.6 }}>•</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 11 }}>📆</span>
+                      {evaluation.closed_at ? (
+                        <>
+                          {formatDateForDisplay(evaluation.opened_at)} – {formatDateForDisplay(evaluation.closed_at)}
+                        </>
+                      ) : (
+                        <>Opens {formatDateForDisplay(evaluation.opened_at)}</>
+                      )}
+                    </span>
+                  </div>
                 </div>
                 
-                {/* Card Number/Code */}
-                <div className="card-number">
-                  {evaluation.course?.code || 'N/A'}
-                </div>
-                
-                {/* Card Title */}
-                <h3 className="card-title">
-                  {evaluation.course?.title || 'Course Evaluation'}
-                </h3>
-                
-                {/* Card Description */}
-                <div className="card-description">
-                  <p><strong>Instructor:</strong> {evaluation.teacher?.name || 'N/A'}</p>
-                  <p><strong>Year Level:</strong> {formatYearLevel(studentYearLevel)}</p>
-                  <p><strong>Academic Year:</strong> {evaluation.academic_year}</p>
-                  <p><strong>Semester:</strong> {evaluation.semester}</p>
-                  <p><strong>Opens:</strong> {formatDateForDisplay(evaluation.opened_at)}</p>
-                  {evaluation.closed_at && (
-                    <p><strong>Closes:</strong> {formatDateForDisplay(evaluation.closed_at)}</p>
-                  )}
-                </div>
-                
-                {/* Card Action Button */}
-                <div className="card-action">
+                {/* Compact Status Footer (replaces large button) */}
+                <div className="card-footer" style={{ padding: '6px 8px 8px', fontSize: 12 }}>
                   {isSubmitted ? (
-                    <button className="ui-btn completed eval-btn" disabled>
-                      ✅ Already Submitted
-                    </button>
+                    <span className="status-chip" style={{ fontWeight: 600, color: '#16a34a', fontSize: 12 }}>✅ Already Submitted</span>
                   ) : !evaluationAvailable ? (
-                    <button className="ui-btn disabled eval-btn" disabled>
-                      {isClosed ? 'Evaluation Closed' : 'Not Available Yet'}
-                    </button>
+                    <span className="status-chip" style={{ fontWeight: 600, color: '#a3a3a3', fontSize: 12 }}>{isClosed ? 'Evaluation Closed' : 'Not Available Yet'}</span>
                   ) : (
-                    <button 
-                      className="ui-btn primary eval-btn"
-                      onClick={() => openEval(evaluation.id)}
-                    >
-                      Fill Evaluation
-                    </button>
+                    <span className="status-chip" style={{ fontWeight: 600, color: '#3b82f6', fontSize: 12 }}>Open</span>
                   )}
                 </div>
               </div>
@@ -906,9 +911,10 @@ function StudentEvaluations() {
           <div className="evaluation-modal">
             {detailLoading ? (
               <LoadingSpinner 
-                size="large" 
-                message="Loading evaluation details..." 
+                size="large"
                 overlay={true}
+                showMessage={false}
+                showElapsed={false}
               />
             ) : (
               <>

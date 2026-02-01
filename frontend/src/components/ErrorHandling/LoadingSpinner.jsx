@@ -11,7 +11,9 @@ function LoadingSpinner({
   overlay = false,
   context = '',
   estimatedTime = null,
-  onCancel = null 
+  onCancel = null,
+  showMessage = false,
+  showElapsed = false
 }) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showCancel, setShowCancel] = useState(false);
@@ -73,9 +75,11 @@ function LoadingSpinner({
         <div className="spinner-inner"></div>
       </div>
       
-      <div className="loading-message">
-        {getContextualMessage()}
-      </div>
+      {showMessage && (
+        <div className="loading-message">
+          {getContextualMessage()}
+        </div>
+      )}
       
       {showProgress && progress !== null && (
         <div className="loading-progress">
@@ -100,7 +104,7 @@ function LoadingSpinner({
         </div>
       )}
       
-      {elapsedTime > 0 && (
+      {showElapsed && elapsedTime > 0 && (
         <div className="loading-time">
           Elapsed: {formatTime(elapsedTime)}
           {estimatedTime && elapsedTime < estimatedTime && (

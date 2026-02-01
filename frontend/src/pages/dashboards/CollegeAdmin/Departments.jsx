@@ -53,13 +53,13 @@ function CollegeAdminDepartments() {
           Add Department
         </button>
       </div>
-      {deptLoading && <p style={{ color: 'var(--muted)', marginTop: 12 }}>Loading departments…</p>}
+      {deptLoading && <LoadingSpinner size="small" showMessage={false} showElapsed={false} />}
       {deptError && <p style={{ color: 'red' }}>{deptError}</p>}
 
       <div className="card" style={{ marginTop: 16 }}>
         <h4>Departments List</h4>
         {deptLoading ? (
-          <p style={{ color: 'var(--muted)' }}>Loading…</p>
+          <LoadingSpinner size="small" showMessage={false} showElapsed={false} />
         ) : (
           <table className="table" style={{ width: '100%', marginTop: 8 }}>
             <thead>

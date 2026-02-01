@@ -836,6 +836,9 @@ class DepartmentController extends Controller
                         'id' => $teacher->id,
                         'name' => $teacher->name,
                         'email' => $teacher->email ?? null,
+                        // Provide photo URL for frontend avatar display; include alias for compatibility
+                        'photo_url' => $teacher->photo_url ?? null,
+                        'profile_photo_url' => $teacher->photo_url ?? null,
                     ],
                     'department' => [
                         'id' => $department->id,

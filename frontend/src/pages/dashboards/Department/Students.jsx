@@ -117,7 +117,6 @@ function DepartmentStudents() {
       <div className="students-dashboard">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading students...</p>
         </div>
       </div>
     );

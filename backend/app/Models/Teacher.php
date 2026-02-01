@@ -11,7 +11,32 @@ class Teacher extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['department_id', 'name', 'email', 'title'];
+    protected $fillable = ['department_id', 'name', 'email', 'title', 'photo_url'];
+
+    /**
+     * Ensure photo_url is an absolute URL so the frontend can load it
+     * regardless of its own origin/port.
+     */
+    public function getPhotoUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+        // If already absolute, return as-is
+        if (is_string($value) && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://'))) {
+            return $value;
+        }
+        // Convert relative storage path (e.g., /storage/...) to absolute URL.
+        // Prefer the current request host (includes dev port), otherwise fallback to app.url.
+        try {
+            $base = request()->getSchemeAndHttpHost();
+        } catch (\Throwable $e) {
+            $base = config('app.url');
+        }
+        $base = rtrim((string) $base, '/');
+        $path = '/' . ltrim((string) $value, '/');
+        return $base . $path;
+    }
 
     public function department(): BelongsTo
     {

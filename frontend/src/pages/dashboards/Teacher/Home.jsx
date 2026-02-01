@@ -144,7 +144,6 @@ function TeacherHome() {
       <div className="teacher-dashboard">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading your dashboard...</p>
         </div>
       </div>
     );

@@ -515,11 +515,10 @@ function Results() {
         <div className="dashboard-header">
           <div>
             <h1>Results</h1>
-            <p>Loading evaluation results...</p>
           </div>
         </div>
-        <div className="loading-container">
-          <LoadingSpinner size="large" message="Loading department evaluation results..." />
+        <div className="loading-container" aria-busy="true" aria-live="polite">
+          <LoadingSpinner size="large" message="" showMessage={false} showElapsed={false} />
         </div>
       </div>
     );
@@ -869,10 +868,17 @@ function Results() {
                         <div key={evaluation.id} className="evaluation-list-item">
                           <div className="teacher-avatar-section">
                             <div className="teacher-avatar">
-                              {evaluation.teacher?.name ?
-                                evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
-                                'UN'
-                              }
+                              {evaluation.teacher?.photo_url ? (
+                                <img
+                                  src={evaluation.teacher.photo_url}
+                                  alt={evaluation.teacher?.name || 'Instructor'}
+                                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                (evaluation.teacher?.name ?
+                                  evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
+                                  'UN')
+                              )}
                             </div>
                           </div>
                           

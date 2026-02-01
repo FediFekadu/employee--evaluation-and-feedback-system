@@ -1533,7 +1533,6 @@ function InteractiveVisualAnalytics({
       <div className={`interactive-visual-analytics ${className}`} style={{ height }}>
         <LoadingState 
           type="skeleton"
-          message="Loading interactive analytics..."
           size="large"
         />
       </div>

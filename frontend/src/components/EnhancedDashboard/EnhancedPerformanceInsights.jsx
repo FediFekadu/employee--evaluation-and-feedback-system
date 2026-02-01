@@ -154,7 +154,6 @@ function EnhancedPerformanceInsights({
       <div className={`enhanced-performance-insights ${className}`}>
         <LoadingState 
           type="skeleton"
-          message="Loading performance insights..."
           size="large"
         />
       </div>

@@ -547,7 +547,6 @@ function InteractivePerformanceInsights({
       <div className={`interactive-performance-insights ${className}`}>
         <LoadingState 
           type="skeleton"
-          message="Loading performance insights..."
           size="large"
         />
       </div>

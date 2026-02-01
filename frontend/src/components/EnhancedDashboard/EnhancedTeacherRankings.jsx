@@ -168,7 +168,6 @@ function EnhancedTeacherRankings({
       <div className={`enhanced-teacher-rankings ${className}`}>
         <LoadingState 
           type="skeleton"
-          message="Loading teacher rankings..."
           size="large"
         />
       </div>

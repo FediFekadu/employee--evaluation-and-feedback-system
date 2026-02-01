@@ -37,7 +37,6 @@ function PeerEvaluationsList() {
       <div className="teacher-dashboard">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading peer evaluations...</p>
         </div>
       </div>
     );

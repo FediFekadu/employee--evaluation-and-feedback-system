@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import '../styles/system-header.css';
@@ -6,6 +6,7 @@ import '../styles/system-header.css';
 function SystemHeader({ theme, onToggleTheme }) {
   const navigate = useNavigate();
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_role');
+  const [logoReady, setLogoReady] = useState(true);
 
   const handleLogout = async () => {
     try { await api.post('/auth/logout'); } catch {}
@@ -43,7 +44,17 @@ function SystemHeader({ theme, onToggleTheme }) {
       <div className="system-header-inner">
         <Link to="/" className="system-brand" aria-label="Home">
           <span className="system-brand-icon" aria-hidden="true">
-            <i className="bi bi-square" />
+            {logoReady ? (
+              <img
+                src="/bhu-logo.jpg"
+                alt="Institution logo"
+                className="system-brand-logo"
+                onLoad={() => setLogoReady(true)}
+                onError={() => setLogoReady(false)}
+              />
+            ) : (
+              <i className="bi bi-square" />
+            )}
           </span>
           <span className="system-brand-text">Informatics College • Feedback & Evaluation</span>
         </Link>

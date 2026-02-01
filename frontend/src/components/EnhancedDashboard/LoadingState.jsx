@@ -15,6 +15,8 @@ function LoadingState({
   estimatedTime = null,
   className = '',
   children = null,
+  showMessage = false,
+  showElapsed = false,
   ...props
 }) {
   const containerClasses = [
@@ -29,8 +31,10 @@ function LoadingState({
   const renderSpinner = () => (
     <div className="loading-spinner-container">
       <div className="enhanced-spinner" />
-      {message && <p className="loading-message text-body-small">{message}</p>}
-      {estimatedTime && (
+      {showMessage && message && (
+        <p className="loading-message text-body-small">{message}</p>
+      )}
+      {showElapsed && estimatedTime && (
         <p className="loading-time text-caption">
           Estimated time: {estimatedTime}
         </p>
@@ -42,7 +46,9 @@ function LoadingState({
   const renderProgress = () => (
     <div className="loading-progress-container">
       <div className="progress-content">
-        {message && <p className="loading-message text-body">{message}</p>}
+        {showMessage && message && (
+          <p className="loading-message text-body">{message}</p>
+        )}
         <div className="enhanced-progress">
           <div 
             className="enhanced-progress-bar"
@@ -99,7 +105,9 @@ function LoadingState({
         <div className="dot" />
         <div className="dot" />
       </div>
-      {message && <p className="loading-message text-body-small">{message}</p>}
+      {showMessage && message && (
+        <p className="loading-message text-body-small">{message}</p>
+      )}
     </div>
   );
 

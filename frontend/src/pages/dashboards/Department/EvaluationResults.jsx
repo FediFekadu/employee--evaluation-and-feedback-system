@@ -230,11 +230,10 @@ function EvaluationResults() {
         <div className="dashboard-header">
           <div>
             <h1>Evaluation Results</h1>
-            <p>Loading detailed evaluation results...</p>
           </div>
         </div>
-        <div className="loading-container">
-          <LoadingSpinner size="large" message="Loading evaluation results..." />
+        <div className="loading-container" aria-busy="true" aria-live="polite">
+          <LoadingSpinner size="large" message="" showMessage={false} showElapsed={false} />
         </div>
       </div>
     );
@@ -614,7 +613,7 @@ function EvaluationResults() {
             <div className="modal-body">
               {courseRatingsLoading ? (
                 <div className="loading-container">
-                  <LoadingSpinner size="medium" message="Loading course ratings..." />
+                  <LoadingSpinner size="medium" showMessage={false} showElapsed={false} />
                 </div>
               ) : courseRatingsError ? (
                 <div className="error-container">

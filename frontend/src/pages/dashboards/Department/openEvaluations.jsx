@@ -176,7 +176,9 @@ function DepartmentManageEvaluations() {
           </label>
         </div>
 
-        {loading && <p>Loading evaluations…</p>}
+        {loading && (
+          <div className="loading-state"><div className="loading-spinner"></div></div>
+        )}
         {!loading && filteredAndSortedEvaluations.length === 0 && <p style={{ color: 'var(--muted)' }}>No evaluations for this session.</p>}
         {!loading && filteredAndSortedEvaluations.length > 0 && (
           (() => {
@@ -261,7 +263,7 @@ function DepartmentManageEvaluations() {
           <span>{error}</span>
         </div>
       )}
-      {loading && <p>Loading…</p>}
+      {loading && <div className="loading-state"><div className="loading-spinner"></div></div>}
     </div>
   );
 }

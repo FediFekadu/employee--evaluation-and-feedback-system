@@ -38,11 +38,15 @@ const EvaluationCard = memo(({
 
       <div className="card-body">
         <div className="instructor-section">
-          <div className="instructor-avatar">
-            {evaluation.teacher?.name ?
-              evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
-              'UN'
-            }
+          <div className="instructor-avatar" style={{ overflow: 'hidden' }}>
+            {evaluation.teacher?.photo_url ? (
+              <img src={evaluation.teacher.photo_url} alt={evaluation.teacher?.name || 'Instructor'} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              (evaluation.teacher?.name ?
+                evaluation.teacher.name.split(' ').map(n => n[0]).join('').toUpperCase() :
+                'UN'
+              )
+            )}
           </div>
           <div className="instructor-details">
             <span className="instructor-name">{evaluation.teacher?.name || 'Unknown Instructor'}</span>

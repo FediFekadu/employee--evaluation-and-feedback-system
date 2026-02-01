@@ -12,6 +12,7 @@ function DepartmentInstructors() {
   const [activeTab, setActiveTab] = useState('instructors');
 
   const [newInstructor, setNewInstructor] = useState({ name: '', email: '', title: '' });
+  const [photoFile, setPhotoFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,22 +50,33 @@ function DepartmentInstructors() {
     setSaving(true);
     setMessage('');
     try {
-      const res = await api.post('/teachers', {
-        name: newInstructor.name,
-        email: newInstructor.email,
-        title: newInstructor.title || undefined,
-        department_id: deptId,
-      });
+      const fd = new FormData();
+      fd.append('name', newInstructor.name);
+      fd.append('email', newInstructor.email);
+      if (newInstructor.title) fd.append('title', newInstructor.title);
+      fd.append('department_id', String(deptId));
+      if (photoFile) fd.append('photo', photoFile);
+      const res = await api.post('/teachers', fd);
       setDepartment((prev) => ({
         ...prev,
         teachers: [res.data, ...(prev?.teachers || [])],
       }));
       setNewInstructor({ name: '', email: '', title: '' });
+      setPhotoFile(null);
       const pwd = res.data?.default_password;
       setMessage(pwd ? `✅ Instructor added. Default password: ${pwd}` : '✅ Instructor added successfully');
       setActiveTab('instructors');
     } catch (e) {
-      setMessage('❌ Failed to add instructor');
+      const serverMsg = e?.response?.data?.message;
+      const errors = e?.response?.data?.errors;
+      let detail = '';
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey && errors[firstKey]?.length) detail = ` (${errors[firstKey][0]})`;
+      } else if (serverMsg) {
+        detail = ` (${serverMsg})`;
+      }
+      setMessage(`❌ Failed to add instructor${detail}`);
     } finally {
       setSaving(false);
     }
@@ -93,7 +105,6 @@ function DepartmentInstructors() {
       <div className="instructors-dashboard">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading instructors...</p>
         </div>
       </div>
     );
@@ -193,7 +204,11 @@ function DepartmentInstructors() {
                   <div key={instructor.id} className={`instructor-card compact ${expandedId === instructor.id ? 'expanded' : ''}`}>
                     <div className="card-top">
                       <div className="instructor-avatar small">
-                        {instructor.name.charAt(0).toUpperCase()}
+                        {instructor.photo_url ? (
+                          <img src={instructor.photo_url} alt={instructor.name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          instructor.name.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div className="instructor-info">
                         <div className="name-row">
@@ -344,6 +359,16 @@ function DepartmentInstructors() {
                 />
                 <small className="form-hint">Optional: Academic rank or position title</small>
               </div>
+              <div className="form-group full-width">
+                <label className="form-label">Instructor Photo</label>
+                <input
+                  className="form-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                />
+                <small className="form-hint">Optional: Upload a profile picture</small>
+              </div>
             </div>
             
             <div className="form-actions">
@@ -351,6 +376,7 @@ function DepartmentInstructors() {
                 className="dept-btn dept-btn-ghost"
                 onClick={() => {
                   setNewInstructor({ name: '', email: '', title: '' });
+                  setPhotoFile(null);
                   setMessage('');
                 }}
               >

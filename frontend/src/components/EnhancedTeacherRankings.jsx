@@ -635,6 +635,35 @@ function EnhancedTeacherRankings({
                     </td>
                     <td>
                       <div className="teacher-info">
+                        <div
+                          className="teacher-avatar"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            marginRight: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'var(--neutral-200)',
+                            overflow: 'hidden',
+                            fontWeight: 600
+                          }}
+                        >
+                          {teacher.photo_url || teacher.profile_photo_url ? (
+                            <img
+                              src={teacher.photo_url || teacher.profile_photo_url}
+                              alt={teacher.teacher_name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            (teacher.teacher_name || 'U')
+                              .split(' ')
+                              .map(n => n[0])
+                              .join('')
+                              .toUpperCase()
+                          )}
+                        </div>
                         <div className="teacher-name">{teacher.teacher_name}</div>
                         <div className="teacher-meta">
                           <span className={`performance-level ${getPerformanceLevelClass(teacher.performance_level)}`}>

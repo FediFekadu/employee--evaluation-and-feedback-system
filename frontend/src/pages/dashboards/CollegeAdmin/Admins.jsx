@@ -112,12 +112,12 @@ function CollegeAdminAdmins() {
         </button>
       </div>
 
-      {deptLoading && <p style={{ color: 'var(--muted)', marginTop: 12 }}>Loading departments…</p>}
+      {deptLoading && <LoadingSpinner size="small" showMessage={false} showElapsed={false} />}
       {deptError && <p style={{ color: 'red' }}>{deptError}</p>}
 
       <div className="card" style={{ marginTop: 16 }}>
         <h4>Assigned Department Admins</h4>
-        {adminsLoading && <p style={{ color: 'var(--muted)' }}>Loading admins…</p>}
+        {adminsLoading && <LoadingSpinner size="small" showMessage={false} showElapsed={false} />}
         {adminsError && <p style={{ color: 'red' }}>{adminsError}</p>}
         {!adminsLoading && !adminsError && (
           <table className="table" style={{ width: '100%', marginTop: 8 }}>

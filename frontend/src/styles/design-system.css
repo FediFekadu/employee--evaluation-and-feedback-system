@@ -312,7 +312,7 @@
 }
 
 .enhanced-btn:focus-visible {
-  outline: 2px solid var(--primary-blue-500);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -324,14 +324,14 @@
 
 /* Button Variants */
 .enhanced-btn-primary {
-  background: var(--primary-blue-600);
+  background: var(--primary);
   color: var(--text-inverse);
-  border-color: var(--primary-blue-600);
+  border-color: var(--primary);
 }
 
 .enhanced-btn-primary:hover:not(:disabled) {
-  background: var(--primary-blue-700);
-  border-color: var(--primary-blue-700);
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }

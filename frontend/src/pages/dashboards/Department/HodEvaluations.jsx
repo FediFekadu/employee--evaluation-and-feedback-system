@@ -34,7 +34,7 @@ function HodEvaluations() {
     try {
       await api.post(`/hod-evaluations/${item.id}/score`, { score: Number(score), remarks });
       // Optimistically update local state
-      setEvaluations(prev => prev.map(ev => ev.id === item.id ? { ...ev, score: Number(score), remarks } : ev));
+      setEvaluations(prev => prev.map(ev => ev.id === item.id ? { ...ev, score: Number(score), remarks, status: 'submitted' } : ev));
     } catch (e) {
       setError('Failed to save HOD score.');
     } finally {
@@ -100,7 +100,7 @@ function HodEvaluations() {
       </div>
 
       {loading && (
-        <div className="loading-state"><div className="loading-spinner"></div><p>Loading HOD evaluations…</p></div>
+        <div className="loading-state"><div className="loading-spinner"></div></div>
       )}
       {error && (
         <div className="error-state">{error}</div>
@@ -126,13 +126,28 @@ function HodEvalItem({ item, onSave, savingId }) {
   const [remarksState, setRemarksState] = useState(item.remarks ?? '');
 
   return (
-    <div className="hod-eval-card">
-      <div className="hod-eval-header">
-        <div className="hod-eval-title">
-          <span className="teacher-name">{item.teacher?.name || 'Unknown Teacher'}</span>
-          <span className="eval-meta">AY {item.academic_year} • {item.semester}</span>
+    <div className="hod-eval-card" style={{ background: 'var(--panel)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+      <div className="hod-eval-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="instructor-avatar" style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: 'var(--neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+            {item.teacher?.photo_url || item.teacher?.profile_photo_url ? (
+              <img src={item.teacher.photo_url || item.teacher.profile_photo_url} alt={item.teacher?.name || 'Instructor'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span>{(item.teacher?.name || 'T').slice(0, 1).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="hod-eval-title">
+            <div className="teacher-name" style={{ fontSize: 18, fontWeight: 600 }}>{item.teacher?.name || 'Unknown Teacher'}</div>
+            <div className="eval-meta" style={{ color: 'var(--muted)' }}>AY {item.academic_year} • {item.semester}</div>
+          </div>
         </div>
-        <div className="eval-status">{item.status || 'open'}</div>
+        <div className="eval-status">
+          {item.status === 'submitted' ? (
+            <span className="status-badge completed">Evaluation submitted</span>
+          ) : (
+            <span className="status-badge open">Open</span>
+          )}
+        </div>
       </div>
       <div className="hod-eval-body">
         <div className="score-row">

@@ -160,7 +160,7 @@ function PerformanceInsights({
   if (loading) {
     return (
       <div className={`performance-insights-container loading ${className}`}>
-        <LoadingSpinner size="large" message="Loading performance insights..." />
+        <LoadingSpinner size="large" showMessage={false} showElapsed={false} />
       </div>
     );
   }

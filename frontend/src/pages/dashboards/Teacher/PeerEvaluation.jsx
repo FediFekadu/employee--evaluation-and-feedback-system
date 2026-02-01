@@ -105,7 +105,7 @@ function PeerEvaluation() {
         )}
       </div>
 
-      {loading && <div className="loading-state"><div className="loading-spinner"></div><p>Loading evaluation…</p></div>}
+      {loading && <div className="loading-state"><div className="loading-spinner"></div></div>}
       {error && <div className="error-state">{error}</div>}
 
       {!loading && !error && !assignedToMe && (

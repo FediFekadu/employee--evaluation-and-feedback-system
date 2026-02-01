@@ -134,6 +134,7 @@ Route::delete('/department-admins/{user}', [DepartmentController::class, 'delete
 Route::get('/teachers', [TeacherController::class, 'index']);
 Route::post('/teachers', [TeacherController::class, 'store']);
 Route::get('/teachers/{teacher}', [TeacherController::class, 'show']);
+Route::post('/teachers/{teacher}/photo', [TeacherController::class, 'uploadPhoto']);
 
 // Students
 Route::get('/students', [StudentController::class, 'index']);

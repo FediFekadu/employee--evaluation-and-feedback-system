@@ -139,7 +139,7 @@ function TeacherFeedback() {
     <div className="card">
       <h3>Course Feedback</h3>
       <p style={{ color: 'var(--muted)' }}>Select a course to view participation, scores, and comments.</p>
-      {loading && <p>Loading…</p>}
+      {loading && <LoadingSpinner size="small" showMessage={false} showElapsed={false} />}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!loading && !error && (
         <div style={{ marginTop: 8 }}>
@@ -159,7 +159,7 @@ function TeacherFeedback() {
           {!selectedCourseId && <p style={{ color: 'var(--muted)' }}>Pick a course to view feedback and participation.</p>}
           {selectedCourseId && (
             <div style={{ marginTop: 12 }}>
-              {evalLoading && <p>Loading results…</p>}
+              {evalLoading && <LoadingSpinner size="small" showMessage={false} showElapsed={false} />}
               {evalError && <p style={{ color: 'red' }}>{evalError}</p>}
               {!evalLoading && !evalError && results && (
                 <>

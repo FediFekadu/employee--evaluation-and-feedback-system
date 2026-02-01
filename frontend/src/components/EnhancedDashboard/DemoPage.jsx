@@ -197,17 +197,16 @@ function DemoPage() {
         </h2>
         <div className="enhanced-grid enhanced-grid-cols-3 enhanced-gap-6">
           <DashboardCard title="Skeleton Loading" variant="primary">
-            <LoadingState type="skeleton" message="Loading content..." />
+            <LoadingState type="skeleton" />
           </DashboardCard>
           
           <DashboardCard title="Spinner Loading" variant="success">
-            <LoadingState type="spinner" message="Processing data..." />
+            <LoadingState type="spinner" />
           </DashboardCard>
           
           <DashboardCard title="Progress Loading" variant="warning">
             <LoadingState 
               type="progress" 
-              message="Generating report..." 
               progress={67}
               estimatedTime="30 seconds"
             />

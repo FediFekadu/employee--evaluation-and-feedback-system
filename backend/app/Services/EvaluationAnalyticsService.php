@@ -1652,7 +1652,8 @@ class EvaluationAnalyticsService
      */
     public function generateDepartmentAggregation(int $departmentId, string $period): array
     {
-        $cacheKey = "department_aggregation_{$departmentId}_{$period}";
+        // v2 suffix busts older caches so new fields (like photo_url) appear immediately
+        $cacheKey = "department_aggregation_{$departmentId}_{$period}_v2";
         
         return Cache::remember($cacheKey, self::HEAVY_CACHE_DURATION, function () use ($departmentId, $period) {
             [$year, $semester] = explode('-', $period);
@@ -1666,7 +1667,8 @@ class EvaluationAnalyticsService
                 ->where('semester', $semester)
                 ->with([
                     'course:id,code,title,department_id',
-                    'teacher:id,name'
+                    // Include photo_url so frontend can render real avatars
+                    'teacher:id,name,photo_url'
                 ])
                 ->get();
             
@@ -1709,6 +1711,7 @@ class EvaluationAnalyticsService
                     $teacherData[$teacherId] = [
                         'teacher_id' => $teacherId,
                         'teacher_name' => $evaluation->teacher->name ?? 'Unknown',
+                        'teacher_photo_url' => $evaluation->teacher->photo_url ?? null,
                         'evaluations' => [],
                         'total_evaluations' => 0,
                         'average_performance_score' => 0,
@@ -1750,6 +1753,7 @@ class EvaluationAnalyticsService
                 $teacherRankings[] = [
                     'teacher_id' => $teacherId,
                     'teacher_name' => $data['teacher_name'],
+                    'photo_url' => $data['teacher_photo_url'] ?? null,
                     'total_evaluations' => count($data['evaluations']),
                     'average_performance_score' => round($avgPerformance, 2),
                     'average_participation_rate' => round($avgParticipation, 2),
