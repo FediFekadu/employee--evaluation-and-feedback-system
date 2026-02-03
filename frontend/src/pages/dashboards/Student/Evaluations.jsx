@@ -88,6 +88,7 @@ function StudentEvaluations() {
   const [anonymous, setAnonymous] = useState(true);
   const [errors, setErrors] = useState({});
   const [responses, setResponses] = useState({});
+  const [generalComment, setGeneralComment] = useState('');
   const [submissionStatuses, setSubmissionStatuses] = useState({});
 
   // Policy: enforce anonymous-only submissions (UI shows toggle as required)
@@ -340,6 +341,7 @@ function StudentEvaluations() {
     setEvalDetail(null);
     setErrors({});
     setResponses({});
+    setGeneralComment('');
     clearErrors();
     
     try {
@@ -586,7 +588,8 @@ function StudentEvaluations() {
           evaluation_id: evalDetail.id, 
           student_id: studentDbId, 
           anonymous, 
-          responses: responseArray 
+          responses: responseArray,
+          comments: generalComment
         }),
         submissionValidationData,
         'evaluation_submission'
@@ -614,6 +617,7 @@ function StudentEvaluations() {
       
       setEvalDetail(null);
       setResponses({});
+      setGeneralComment('');
       resetSubmissionState();
       
       // Refresh evaluations list using hook
@@ -1133,6 +1137,26 @@ function StudentEvaluations() {
                       </div>
                     );
                   })()}
+
+                  {/* General Comment Section */}
+                  <div className="general-comment-section" style={{ marginTop: 24, padding: '16px', background: 'var(--neutral-50)', borderRadius: 8, border: '1px solid var(--border-soft)' }}>
+                    <h4 style={{ margin: '0 0 8px', fontSize: '0.95rem' }}>General Comments (Optional)</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 12 }}>
+                      Please share any additional feedback about the course or instructor.
+                    </p>
+                    <textarea
+                      className="question-textarea"
+                      rows="4"
+                      placeholder="Write your comments here..."
+                      value={generalComment}
+                      onChange={(e) => setGeneralComment(e.target.value)}
+                      maxLength={1000}
+                      style={{ width: '100%', padding: 12, borderRadius: 6, border: '1px solid var(--border-medium)' }}
+                    />
+                    <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                      {generalComment.length}/1000 characters
+                    </div>
+                  </div>
                 </div>
 
                 {/* Modal Footer */}

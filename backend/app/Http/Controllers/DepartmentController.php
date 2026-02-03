@@ -870,6 +870,94 @@ class DepartmentController extends Controller
     }
 
     /**
+     * Aggregate student comments across all courses taught by a teacher in a department.
+     */
+    public function teacherComments(Request $request, Department $department, $teacherId)
+    {
+        try {
+            $data = $request->validate([
+                'academic_year' => 'nullable|string',
+                'semester' => 'nullable|string',
+            ]);
+            
+            $academicYear = $data['academic_year'] ?? null;
+            $semester = $data['semester'] ?? null;
+            
+            $query = \App\Models\Feedback::with([
+                    'student:id,name',
+                    'evaluation:id,course_id,teacher_id,academic_year,semester',
+                    'evaluation.course:id,title,code,department_id',
+                    'evaluation.teacher:id,name'
+                ])
+                ->whereHas('evaluation', function ($q) use ($department, $teacherId, $academicYear, $semester) {
+                    $q->where('teacher_id', $teacherId)
+                      ->whereHas('course', function ($qc) use ($department) {
+                          $qc->where('department_id', $department->id);
+                      });
+                    if ($academicYear) {
+                        $q->where('academic_year', $academicYear);
+                    }
+                    if ($semester) {
+                        $q->where('semester', $semester);
+                    }
+                })
+                ->whereNotNull('comments')
+                ->orderByDesc('created_at');
+            
+            $comments = $query->get()->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'comments' => $f->comments,
+                    'anonymous' => (bool) $f->anonymous,
+                    'created_at' => $f->created_at,
+                    'student' => $f->anonymous ? null : [
+                        'id' => $f->student?->id,
+                        'name' => $f->student?->name,
+                    ],
+                    'evaluation' => [
+                        'id' => $f->evaluation->id,
+                        'academic_year' => $f->evaluation->academic_year,
+                        'semester' => $f->evaluation->semester,
+                        'course' => [
+                            'id' => $f->evaluation->course->id,
+                            'title' => $f->evaluation->course->title,
+                            'code' => $f->evaluation->course->code,
+                        ],
+                        'teacher' => [
+                            'id' => $f->evaluation->teacher->id,
+                            'name' => $f->evaluation->teacher->name,
+                        ],
+                    ],
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'department_id' => $department->id,
+                'teacher_id' => (int) $teacherId,
+                'filters' => [
+                    'academic_year' => $academicYear ?? 'All',
+                    'semester' => $semester ?? 'All',
+                ],
+                'count' => $comments->count(),
+                'comments' => $comments,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to aggregate teacher comments', [
+                'department_id' => $department->id,
+                'teacher_id' => $teacherId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load comments for this teacher.',
+                'error' => 'teacher_comments_failed'
+            ], 500);
+        }
+    }
+ 
+    /**
      * Get content type for export format
      */
     private function getContentType($format)

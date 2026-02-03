@@ -12,6 +12,7 @@ function TeacherFeedback() {
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
   const [results, setResults] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [studentComments, setStudentComments] = useState([]);
 
   useEffect(() => {
     const tid = typeof window !== 'undefined' ? localStorage.getItem('teacher_id') : null;
@@ -55,6 +56,7 @@ function TeacherFeedback() {
         setSelectedEvaluation(null);
         setResults(null);
         setSummary(null);
+        setStudentComments([]);
         setEvalError('');
         return;
       }
@@ -75,20 +77,29 @@ function TeacherFeedback() {
           setSelectedEvaluation(null);
           setResults(null);
           setSummary(null);
+          setStudentComments([]);
           setEvalError('No evaluation found for this course.');
           return;
         }
         setSelectedEvaluation(selected);
 
-        // Load detailed results and summary
-        const [resultsRes, summaryRes] = await Promise.all([
+        // Load detailed results, summary, and comments
+        const [resultsRes, summaryRes, commentsRes] = await Promise.all([
           api.get(`/evaluations/${selected.id}/results`),
-          api.get(`/evaluations/${selected.id}/summary`)
+          api.get(`/evaluations/${selected.id}/summary`),
+          api.get(`/courses/${selectedCourseId}/comments`, {
+            params: {
+              teacher_id: teacherId,
+              academic_year: selected.academic_year,
+              semester: selected.semester
+            }
+          })
         ]);
 
         if (!mounted) return;
         setResults(resultsRes.data);
         setSummary(summaryRes.data);
+        setStudentComments(commentsRes.data.comments || []);
       } catch (e) {
         if (!mounted) return;
         console.error('Failed to load evaluation results', e);
@@ -252,6 +263,30 @@ function TeacherFeedback() {
                           <div key={`${c.question_id}-${idx}`} style={{ padding: 12, border: '1px solid #eee', borderRadius: 10 }}>
                             <div style={{ fontSize: 12, color: 'var(--muted)' }}>Question #{c.question_id}</div>
                             <div style={{ fontSize: 14 }}>{c.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Student Comments */}
+                  <div style={{ marginTop: 18 }}>
+                    <h4 style={{ marginBottom: 8 }}>Student Feedback Comments</h4>
+                    {studentComments.length === 0 && (
+                      <p style={{ color: 'var(--muted)' }}>No student comments available.</p>
+                    )}
+                    {studentComments.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {studentComments.map((c) => (
+                          <div key={c.id} style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, background: '#fafafa' }}>
+                            <div style={{ fontSize: 14, marginBottom: 8, whiteSpace: 'pre-wrap' }}>{c.comments}</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)' }}>
+                              <span>
+                                {c.anonymous ? 'Anonymous Student' : (c.student?.name || 'Student')}
+                              </span>
+                              <span>
+                                {new Date(c.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>

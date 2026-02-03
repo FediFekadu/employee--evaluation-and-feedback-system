@@ -54,6 +54,21 @@ class ReportGenerationService
             $paginatedQuestions = $this->getPaginatedQuestionAnalysis($evaluationId, $questionPage, $questionPerPage);
             $questionAnalysis = $paginatedQuestions['data'] ?? [];
         }
+
+        // Fetch comments
+        $comments = Feedback::with('student:id,name')
+            ->where('evaluation_id', $evaluationId)
+            ->whereNotNull('comments')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($f) {
+                return [
+                    'text' => $f->comments,
+                    'created_at' => $f->created_at->toIso8601String(),
+                    'anonymous' => (bool)$f->anonymous,
+                    'student_name' => $f->anonymous ? 'Anonymous' : ($f->student?->name ?? 'Unknown Student')
+                ];
+            });
         
         return [
             'report_type' => 'teacher_evaluation',
@@ -88,6 +103,7 @@ class ReportGenerationService
                 'last_submission_at' => $participationData['last_submission_at'] ?? null,
             ],
             'question_analysis' => $questionAnalysis,
+            'comments' => $comments,
             'privacy_preserved' => false, // Will be set to true when privacy controls are applied
         ];
     }

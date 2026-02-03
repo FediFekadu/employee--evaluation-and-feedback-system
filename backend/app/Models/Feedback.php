@@ -12,7 +12,7 @@ class Feedback extends Model
     use HasFactory;
 
     protected $table = 'feedbacks';
-    protected $fillable = ['evaluation_id', 'student_id', 'anonymous', 'submission_id', 'is_locked'];
+    protected $fillable = ['evaluation_id', 'student_id', 'anonymous', 'submission_id', 'is_locked', 'comments'];
 
     protected $casts = [
         'anonymous' => 'boolean',

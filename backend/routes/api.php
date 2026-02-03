@@ -48,6 +48,8 @@ Route::get('/courses/{course}', [CourseController::class, 'show']);
 Route::put('/courses/{course}', [CourseController::class, 'update']);
 Route::post('/courses/{id}/assign-teacher', [CourseController::class, 'assignTeacher']);
 Route::post('/courses/{id}/remove-teacher', [CourseController::class, 'removeTeacher']);
+// Course comments aggregation (teacher view)
+Route::get('/courses/{course}/comments', [CourseController::class, 'comments']);
 
 Route::get('/evaluations', [EvaluationController::class, 'index']);
 Route::post('/evaluations', [EvaluationController::class, 'store']);
@@ -63,6 +65,8 @@ Route::get('/evaluations/{evaluation}/submission-status', [EvaluationController:
 Route::get('/evaluations/{evaluation}/analytics', [EvaluationController::class, 'analytics']);
 Route::get('/evaluations/{evaluation}/results', [EvaluationController::class, 'results']);
 Route::post('/evaluations/{evaluation}/export', [EvaluationController::class, 'export']);
+// List comments for teacher view (per evaluation/course)
+Route::get('/evaluations/{evaluation}/comments', [FeedbackController::class, 'comments']);
 
 // Participation monitoring endpoints
 Route::get('/evaluations/low-participation', [EvaluationController::class, 'lowParticipation']);
@@ -85,6 +89,7 @@ Route::get('/departments/{department}', [DepartmentController::class, 'show']);
 Route::get('/departments/{department}/evaluation-results', [DepartmentController::class, 'evaluationResults']);
 Route::get('/departments/{department}/evaluation-results/poll', [DepartmentController::class, 'pollEvaluationResults']);
 Route::get('/departments/{department}/teachers/{teacherId}/course-ratings', [DepartmentController::class, 'teacherCourseRatings']);
+Route::get('/departments/{department}/teachers/{teacherId}/comments', [DepartmentController::class, 'teacherComments']);
 Route::get('/departments/{department}/analytics', [DepartmentController::class, 'analytics']);
 Route::get('/departments/{department}/reports', [DepartmentController::class, 'reports'])
     ->middleware('throttle:analytics');

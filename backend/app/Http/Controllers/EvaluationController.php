@@ -123,6 +123,25 @@ class EvaluationController extends Controller
             ], 422);
         }
 
+        // Enforce: one evaluation per instructor per course per semester/year
+        $existing = Evaluation::where('teacher_id', $teacher->id)
+            ->where('course_id', $course->id)
+            ->where('academic_year', $data['academic_year'])
+            ->where('semester', $data['semester'])
+            ->exists();
+        if ($existing) {
+            return response()->json([
+                'message' => 'An evaluation for this instructor, course, academic year, and semester already exists.',
+                'error' => 'duplicate_evaluation_for_semester',
+                'details' => [
+                    'teacher_id' => $teacher->id,
+                    'course_id' => $course->id,
+                    'academic_year' => $data['academic_year'],
+                    'semester' => $data['semester'],
+                ],
+            ], 422);
+        }
+
         $data['department_id'] = $course->department_id;
         
         $evaluation = Evaluation::create($data);
@@ -174,7 +193,29 @@ class EvaluationController extends Controller
                 ];
             }
         }
-        
+
+        // If academic_year/semester are being changed, ensure uniqueness per instructor/course/semester/year
+        $newAcademicYear = $data['academic_year'] ?? $evaluation->academic_year;
+        $newSemester = $data['semester'] ?? $evaluation->semester;
+        $duplicateExists = Evaluation::where('id', '<>', $evaluation->id)
+            ->where('teacher_id', $evaluation->teacher_id)
+            ->where('course_id', $evaluation->course_id)
+            ->where('academic_year', $newAcademicYear)
+            ->where('semester', $newSemester)
+            ->exists();
+        if ($duplicateExists) {
+            return response()->json([
+                'message' => 'Another evaluation for this instructor, course, academic year, and semester already exists.',
+                'error' => 'duplicate_evaluation_for_semester',
+                'details' => [
+                    'teacher_id' => $evaluation->teacher_id,
+                    'course_id' => $evaluation->course_id,
+                    'academic_year' => $newAcademicYear,
+                    'semester' => $newSemester,
+                ],
+            ], 422);
+        }
+
         $evaluation->update($data);
 
         // If opened_at present, ensure peer/HOD evaluations are initialized/kept in sync

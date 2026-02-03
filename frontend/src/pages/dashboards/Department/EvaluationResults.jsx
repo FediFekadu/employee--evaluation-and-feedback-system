@@ -27,6 +27,7 @@ function EvaluationResults() {
   // Core state
   const [department, setDepartment] = useState(null);
   const [evaluationResults, setEvaluationResults] = useState(null);
+  const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [criticalError, setCriticalError] = useState(null);
@@ -75,6 +76,26 @@ function EvaluationResults() {
         'evaluation_results_load'
       );
       setEvaluationResults(resultsRes.data);
+
+      // Load aggregated teacher comments across courses for this department (same period)
+      try {
+        const teacherId = resultsRes.data?.instructor_information?.teacher_id;
+        if (teacherId) {
+          const commentsRes = await handleApiCall(
+            () => api.get(`/departments/${departmentId}/teachers/${teacherId}/comments`, {
+              params: {
+                academic_year: resultsRes.data?.academic_year,
+                semester: resultsRes.data?.semester
+              }
+            }),
+            'teacher_comments_load'
+          );
+          setComments(commentsRes.data.comments || []);
+        }
+      } catch (commentErr) {
+        console.warn('Failed to load aggregated teacher comments:', commentErr);
+        // Don't block the main view if comments fail to load
+      }
 
     } catch (err) {
       console.error('Failed to load evaluation results:', err);
@@ -511,6 +532,53 @@ function EvaluationResults() {
             {/* Section Analysis removed per request */}
 
             {/* Participation Analysis intentionally removed per request */}
+
+             {/* Student Comments Section */}
+            <div className="results-section">
+               <h3>💬 Student Feedback Comments (All Courses for Instructor)</h3>
+              {comments.length > 0 ? (
+                <div className="comments-list">
+                  {comments.map((comment, index) => (
+                    <div key={index} className="comment-item" style={{ 
+                      padding: '16px', 
+                      background: '#f8fafc', 
+                      borderRadius: '8px', 
+                      marginBottom: '12px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div className="comment-text" style={{ fontSize: '0.95rem', color: '#334155', marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
+                         {comment.comments}
+                      </div>
+                       <div className="comment-meta" style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem', color: '#64748b' }}>
+                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                           <span>
+                             {comment.anonymous ? 'Anonymous Student' : (comment.student?.name || 'Student')}
+                           </span>
+                           <span>
+                             {new Date(comment.created_at).toLocaleDateString(undefined, { 
+                               year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                             })}
+                           </span>
+                         </div>
+                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                           <span style={{ opacity: 0.85 }}>
+                             {comment.evaluation?.course?.title ? comment.evaluation.course.title : 'Course'} 
+                             {comment.evaluation?.course?.code ? ` (${comment.evaluation.course.code})` : ''}
+                           </span>
+                           <span style={{ opacity: 0.85 }}>
+                             {comment.evaluation?.teacher?.name ? comment.evaluation.teacher.name : 'Instructor'}
+                           </span>
+                         </div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state" style={{ padding: '24px', textAlign: 'center', background: '#f8fafc', borderRadius: '8px' }}>
+                  <p style={{ color: '#64748b', margin: 0 }}>No comments provided by students.</p>
+                </div>
+              )}
+            </div>
 
             {/* Instructor Courses Section */}
             <div className="results-section">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Teacher;
+use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
@@ -187,5 +188,61 @@ class CourseController extends Controller
                 'message' => 'An error occurred while removing the instructor'
             ], 500);
         }
+    }
+
+    /**
+     * List student comments for a course, optionally filtered by teacher, academic_year, semester.
+     */
+    public function comments(Request $request, Course $course)
+    {
+        $teacherId = $request->query('teacher_id');
+        $academicYear = $request->query('academic_year');
+        $semester = $request->query('semester');
+
+        $query = Feedback::with(['student:id,name', 'evaluation:id,course_id,teacher_id,academic_year,semester'])
+            ->whereHas('evaluation', function ($q) use ($course, $teacherId, $academicYear, $semester) {
+                $q->where('course_id', $course->id);
+                if ($teacherId) {
+                    $q->where('teacher_id', $teacherId);
+                }
+                if ($academicYear) {
+                    $q->where('academic_year', $academicYear);
+                }
+                if ($semester) {
+                    $q->where('semester', $semester);
+                }
+            })
+            ->whereNotNull('comments')
+            ->orderByDesc('created_at');
+
+        $comments = $query->get()->map(function ($f) {
+            return [
+                'id' => $f->id,
+                'comments' => $f->comments,
+                'anonymous' => (bool) $f->anonymous,
+                'created_at' => $f->created_at,
+                'student' => $f->anonymous ? null : [
+                    'id' => $f->student?->id,
+                    'name' => $f->student?->name,
+                ],
+                'evaluation' => [
+                    'id' => $f->evaluation->id,
+                    'teacher_id' => $f->evaluation->teacher_id,
+                    'academic_year' => $f->evaluation->academic_year,
+                    'semester' => $f->evaluation->semester,
+                ]
+            ];
+        });
+
+        return response()->json([
+            'course_id' => $course->id,
+            'filters' => [
+                'teacher_id' => $teacherId,
+                'academic_year' => $academicYear,
+                'semester' => $semester,
+            ],
+            'count' => $comments->count(),
+            'comments' => $comments,
+        ]);
     }
 }

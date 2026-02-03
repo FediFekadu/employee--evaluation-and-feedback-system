@@ -66,7 +66,8 @@ class FeedbackController extends Controller
                 'evaluation_id' => 'required|exists:evaluations,id',
                 'student_id' => 'required|exists:students,id',
                 'anonymous' => 'boolean',
-                'responses' => 'required|array|min:1',
+                'comments' => 'nullable|string|max:1000',
+                'responses' => 'nullable|array|min:1',
                 'responses.*.question_id' => 'required|exists:questions,id',
                 'responses.*.rating' => 'nullable|integer|min:1|max:5',
                 'responses.*.text' => 'nullable|string|max:1000|regex:/^[^<>\'";]*$/',
@@ -75,7 +76,7 @@ class FeedbackController extends Controller
                 'evaluation_id.exists' => 'The specified evaluation does not exist or has been removed.',
                 'student_id.required' => 'Student identification is required for submission tracking.',
                 'student_id.exists' => 'Invalid student credentials. Please log in again.',
-                'responses.required' => 'At least one response is required to submit the evaluation.',
+                'comments.max' => 'Comments cannot exceed 1000 characters.',
                 'responses.min' => 'Please provide at least one response before submitting.',
                 'responses.*.question_id.required' => 'Each response must be associated with a valid question.',
                 'responses.*.question_id.exists' => 'One or more questions are invalid or have been removed.',
@@ -87,6 +88,14 @@ class FeedbackController extends Controller
             ]);
 
             // Enhanced malicious content validation
+            if (isset($data['comments']) && $this->containsMaliciousContent($data['comments'])) {
+                return response()->json([
+                    'message' => 'Security validation failed',
+                    'error' => 'malicious_content',
+                    'details' => "Comments contain potentially harmful content. Please review your input and remove any suspicious text."
+                ], 422);
+            }
+
             if (isset($data['responses'])) {
                 foreach ($data['responses'] as $index => $response) {
                     if (isset($response['text']) && $this->containsMaliciousContent($response['text'])) {
@@ -127,18 +136,20 @@ class FeedbackController extends Controller
             }
 
             // Enhanced duplicate submission check with detailed response
-            if (!$this->submissionValidationService->validateSubmissionEligibility($data['student_id'], $data['evaluation_id'])) {
-                $existingSubmission = $this->submissionValidationService->getSubmissionStatus($data['student_id'], $data['evaluation_id']);
-                
-                return response()->json([
-                    'message' => 'Duplicate submission prevented. You have already submitted this evaluation.',
-                    'error' => 'duplicate_submission',
-                    'submission_details' => [
-                        'submitted_at' => $existingSubmission['submitted_at'],
-                        'is_anonymous' => $existingSubmission['is_anonymous']
-                    ],
-                    'help_text' => 'Each student can only submit one evaluation per course-teacher combination. If you believe this is an error, please contact your instructor or administrator.'
-                ], 422);
+            $hasResponsesPayload = isset($data['responses']) && is_array($data['responses']) && count($data['responses']) > 0;
+            if ($hasResponsesPayload) {
+                if (!$this->submissionValidationService->validateSubmissionEligibility($data['student_id'], $data['evaluation_id'])) {
+                    $existingSubmission = $this->submissionValidationService->getSubmissionStatus($data['student_id'], $data['evaluation_id']);
+                    
+                    return response()->json([
+                        'message' => 'Duplicate submission prevented. You have already submitted this evaluation.',
+                        'error' => 'duplicate_submission',
+                        'submission_details' => [
+                            'submitted_at' => $existingSubmission['submitted_at'],
+                            'is_anonymous' => $existingSubmission['is_anonymous']
+                        ]
+                    ], 422);
+                }
             }
 
             // Enhanced transaction with better error handling
@@ -149,31 +160,49 @@ class FeedbackController extends Controller
                         'evaluation_id' => $data['evaluation_id'],
                         'student_id' => $data['student_id'],
                         'anonymous' => $data['anonymous'] ?? true,
+                        'comments' => $data['comments'] ?? null,
                     ]);
 
                     $responseCount = 0;
                     $validResponses = 0;
 
-                    // Create response records with enhanced validation
-                    foreach ($data['responses'] as $resp) {
-                        $responseCount++;
-                        
-                        // Skip completely empty responses
-                        if (empty($resp['rating']) && empty($resp['text'])) {
-                            continue;
+                    // Create response records with enhanced validation (if provided)
+                    if (isset($data['responses']) && is_array($data['responses'])) {
+                        foreach ($data['responses'] as $resp) {
+                            $responseCount++;
+                            
+                            // Skip completely empty responses
+                            if (empty($resp['rating']) && empty($resp['text'])) {
+                                continue;
+                            }
+                            
+                            $validResponses++;
+                            $feedback->responses()->create([
+                                'question_id' => $resp['question_id'],
+                                'rating' => $resp['rating'] ?? null,
+                                'text' => $resp['text'] ?? null,
+                            ]);
                         }
-                        
-                        $validResponses++;
-                        $feedback->responses()->create([
-                            'question_id' => $resp['question_id'],
-                            'rating' => $resp['rating'] ?? null,
-                            'text' => $resp['text'] ?? null,
-                        ]);
                     }
 
-                    // Ensure at least some valid responses were provided
+                    // If there are no valid responses, treat this as a comment-only submission.
                     if ($validResponses === 0) {
-                        throw new \Exception('No valid responses provided. Please complete at least one question before submitting.');
+                        $this->auditLogService->logFeedbackSubmission(
+                            $feedback->id, 
+                            $data['student_id'], 
+                            $data['evaluation_id'], 
+                            $request
+                        );
+                        return response()->json([
+                            'message' => 'Comment submitted successfully.',
+                            'success' => true,
+                            'feedback' => $feedback,
+                            'statistics' => [
+                                'total_responses' => 0,
+                                'valid_responses' => 0,
+                                'completion_rate' => 0
+                            ]
+                        ], 201);
                     }
 
                     // Mark submission as complete
@@ -279,4 +308,38 @@ class FeedbackController extends Controller
         }
     }
 
+    /**
+     * List comments for a specific evaluation (course-teacher), for teacher view.
+     */
+    public function comments(\App\Models\Evaluation $evaluation)
+    {
+        $comments = Feedback::with(['student:id,name', 'evaluation:id,course_id,teacher_id'])
+            ->where('evaluation_id', $evaluation->id)
+            ->whereNotNull('comments')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'comments' => $f->comments,
+                    'anonymous' => (bool) $f->anonymous,
+                    'created_at' => $f->created_at,
+                    'student' => $f->anonymous ? null : [
+                        'id' => $f->student?->id,
+                        'name' => $f->student?->name,
+                    ],
+                    'evaluation' => [
+                        'id' => $f->evaluation->id,
+                        'course_id' => $f->evaluation->course_id,
+                        'teacher_id' => $f->evaluation->teacher_id,
+                    ]
+                ];
+            });
+        
+        return response()->json([
+            'evaluation_id' => $evaluation->id,
+            'count' => $comments->count(),
+            'comments' => $comments,
+        ]);
+    }
 }
