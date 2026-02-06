@@ -5,12 +5,25 @@ namespace App\Services;
 use App\Models\Evaluation;
 use App\Models\Student;
 use App\Models\EvaluationSubmission;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class NotificationService
 {
+    public function createNotification(string $recipientType, int $recipientId, string $type, ?string $title = null, ?string $message = null, array $meta = [], string $priority = 'info'): Notification
+    {
+        return Notification::create([
+            'recipient_type' => $recipientType,
+            'recipient_id' => $recipientId,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'meta' => $meta,
+            'priority' => $priority,
+        ]);
+    }
     /**
      * Send reminder notifications to students who haven't submitted evaluations.
      * 
@@ -181,19 +194,14 @@ class NotificationService
     private function sendInAppNotification(array $reminderData): bool
     {
         try {
-            // In a real implementation, this would create database notifications
-            // or push notifications through a service like Pusher
-            Log::info("In-app notification sent", [
-                'type' => 'in_app_notification',
-                'student_id' => $reminderData['student_id'],
-                'student_name' => $reminderData['student_name'],
+            $message = $reminderData['custom_message'] ?? 'Evaluation reminder';
+            $meta = [
                 'evaluation_id' => $reminderData['evaluation_id'],
                 'course_name' => $reminderData['course_name'],
                 'teacher_name' => $reminderData['teacher_name'],
                 'days_remaining' => $reminderData['days_remaining'],
-                'custom_message' => $reminderData['custom_message'],
-                'sent_at' => $reminderData['sent_at'],
-            ]);
+            ];
+            $this->createNotification('student', (int) $reminderData['student_id'], 'closing_soon', 'Evaluation Closing Soon', $message, $meta, 'warning');
 
             return true;
 

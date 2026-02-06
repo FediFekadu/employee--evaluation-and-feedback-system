@@ -52,6 +52,7 @@ function StudentLayout() {
   const navigationItems = [
     { to: '/dashboard', label: 'Home', iconClass: 'bi-house' },
     { to: '/dashboard/evaluations', label: 'Evaluations', iconClass: 'bi-clipboard-check' },
+    { to: '/dashboard/department-comment', label: 'Dept Comment', iconClass: 'bi-chat-dots' },
     { to: '/dashboard/profile', label: 'Profile', iconClass: 'bi-person-circle' }
   ];
 

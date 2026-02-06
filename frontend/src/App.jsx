@@ -11,6 +11,7 @@ import StudentLayout from './pages/dashboards/Student/Layout';
 import StudentHome from './pages/dashboards/Student/Home';
 import StudentEvaluations from './pages/dashboards/Student/Evaluations';
 import StudentProfile from './pages/dashboards/Student/Profile';
+import DepartmentComment from './pages/dashboards/Student/DepartmentComment';
 // Admin dashboard nested (used by /admin and /superadmin)
 import CollegeAdminLayout from './pages/dashboards/CollegeAdmin/Layout';
 import CollegeAdminOverview from './pages/dashboards/CollegeAdmin/Overview';
@@ -43,6 +44,7 @@ import DepartmentEvaluationResults from './pages/dashboards/Department/Evaluatio
 import DepartmentReports from './pages/dashboards/Department/Reports';
 import DepartmentOpenEvaluations from './pages/dashboards/Department/openEvaluations';
 import HodEvaluations from './pages/dashboards/Department/HodEvaluations';
+import DepartmentComments from './pages/dashboards/Department/Comments';
 import { DepartmentRouteGuard } from './components/RouteGuard';
 
 // Wrapper components for protected routes
@@ -172,6 +174,7 @@ function App() {
               <Route index element={<StudentHome />} />
               <Route path="evaluations" element={<StudentEvaluations />} />
               <Route path="profile" element={<StudentProfile />} />
+              <Route path="department-comment" element={<DepartmentComment />} />
             </Route>
             {/* College Admin dashboard */}
             <Route path="/admin" element={<CollegeAdminLayout />}>
@@ -217,6 +220,7 @@ function App() {
               <Route path="students" element={<DepartmentStudents />} />
               <Route path="evaluations" element={<DepartmentEvaluations />} />
               <Route path="hod-evaluations" element={<HodEvaluations />} />
+              <Route path="comments" element={<DepartmentComments />} />
               <Route path="manage-evaluations" element={<DepartmentOpenEvaluations />} />
               <Route path="results" element={<DepartmentResultsWrapper />} />
               <Route path="results/:evaluationId" element={<DepartmentEvaluationResultsWrapper />} />

@@ -162,6 +162,61 @@ class EvaluationController extends Controller
 
         // Note: Real-time broadcasting has been removed
         
+        try {
+            $notificationService = app(\App\Services\NotificationService::class);
+            $studentIds = \App\Models\Student::where('department_id', $course->department_id)->pluck('id')->all();
+            foreach ($studentIds as $sid) {
+                $notificationService->createNotification(
+                    'student',
+                    (int) $sid,
+                    'opened',
+                    'Evaluation Opened',
+                    'A new evaluation has been opened',
+                    [
+                        'evaluation_id' => $evaluation->id,
+                        'course_id' => $course->id,
+                        'teacher_id' => $teacher->id,
+                        'academic_year' => $evaluation->academic_year,
+                        'semester' => $evaluation->semester,
+                        'year_level' => $evaluation->year_level,
+                    ],
+                    'info'
+                );
+            }
+            $notificationService->createNotification(
+                'teacher',
+                (int) $teacher->id,
+                'opened',
+                'Evaluation Opened',
+                'Your evaluation is now open',
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'course_id' => $course->id,
+                    'academic_year' => $evaluation->academic_year,
+                    'semester' => $evaluation->semester,
+                    'year_level' => $evaluation->year_level,
+                ],
+                'info'
+            );
+            $notificationService->createNotification(
+                'department',
+                (int) $course->department_id,
+                'opened',
+                'Evaluation Opened',
+                'An evaluation has been opened in your department',
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'course_id' => $course->id,
+                    'teacher_id' => $teacher->id,
+                    'academic_year' => $evaluation->academic_year,
+                    'semester' => $evaluation->semester,
+                    'year_level' => $evaluation->year_level,
+                ],
+                'info'
+            );
+        } catch (\Throwable $e) {
+        }
+        
         return response()->json($evaluation, 201);
     }
 
@@ -280,10 +335,65 @@ class EvaluationController extends Controller
         
         // Note: Real-time broadcasting has been removed
 
-        return response()->json([
+        $response = [
             'evaluation_id' => $evaluation->id,
             'questions' => $evaluation->questions()->get(),
-        ]);
+        ];
+        try {
+            $studentIds = \App\Models\Student::where('department_id', $course->department_id)->pluck('id')->all();
+            $notificationService = app(\App\Services\NotificationService::class);
+            foreach ($studentIds as $sid) {
+                $notificationService->createNotification(
+                    'student',
+                    (int) $sid,
+                    'opened',
+                    'Evaluation Opened',
+                    'A new evaluation has been opened',
+                    [
+                        'evaluation_id' => $evaluation->id,
+                        'course_id' => $course->id,
+                        'teacher_id' => $teacher->id,
+                        'academic_year' => $evaluation->academic_year,
+                        'semester' => $evaluation->semester,
+                        'year_level' => $evaluation->year_level,
+                    ],
+                    'info'
+                );
+            }
+            $notificationService->createNotification(
+                'teacher',
+                (int) $teacher->id,
+                'opened',
+                'Evaluation Opened',
+                'Your evaluation is now open',
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'course_id' => $course->id,
+                    'academic_year' => $evaluation->academic_year,
+                    'semester' => $evaluation->semester,
+                    'year_level' => $evaluation->year_level,
+                ],
+                'info'
+            );
+            $notificationService->createNotification(
+                'department',
+                (int) $course->department_id,
+                'opened',
+                'Evaluation Opened',
+                'An evaluation has been opened in your department',
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'course_id' => $course->id,
+                    'teacher_id' => $teacher->id,
+                    'academic_year' => $evaluation->academic_year,
+                    'semester' => $evaluation->semester,
+                    'year_level' => $evaluation->year_level,
+                ],
+                'info'
+            );
+        } catch (\Throwable $e) {
+        }
+        return response()->json($response);
     }
 
     /**
@@ -308,11 +418,66 @@ class EvaluationController extends Controller
         
         // Note: Real-time broadcasting has been removed
 
-        return response()->json([
+        $response = [
             'message' => 'Evaluation closed successfully',
             'evaluation' => $evaluation,
             'closed_at' => $closedAt->toISOString()
-        ]);
+        ];
+        try {
+            $studentIds = \App\Models\Student::where('department_id', $evaluation->course->department_id)->pluck('id')->all();
+            $notificationService = app(\App\Services\NotificationService::class);
+            foreach ($studentIds as $sid) {
+                $notificationService->createNotification(
+                    'student',
+                    (int) $sid,
+                    'closed',
+                    'Evaluation Closed',
+                    'The evaluation has been closed',
+                    [
+                        'evaluation_id' => $evaluation->id,
+                        'course_id' => $evaluation->course->id,
+                        'teacher_id' => $evaluation->teacher->id,
+                        'academic_year' => $evaluation->academic_year,
+                        'semester' => $evaluation->semester,
+                        'closed_at' => $closedAt->toISOString(),
+                    ],
+                    'warning'
+                );
+            }
+            $notificationService->createNotification(
+                'teacher',
+                (int) $evaluation->teacher->id,
+                'closed',
+                'Evaluation Closed',
+                'Your evaluation has been closed',
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'course_id' => $evaluation->course->id,
+                    'academic_year' => $evaluation->academic_year,
+                    'semester' => $evaluation->semester,
+                    'closed_at' => $closedAt->toISOString(),
+                ],
+                'warning'
+            );
+            $notificationService->createNotification(
+                'department',
+                (int) $evaluation->course->department_id,
+                'closed',
+                'Evaluation Closed',
+                'An evaluation in your department has been closed',
+                [
+                    'evaluation_id' => $evaluation->id,
+                    'course_id' => $evaluation->course->id,
+                    'teacher_id' => $evaluation->teacher->id,
+                    'academic_year' => $evaluation->academic_year,
+                    'semester' => $evaluation->semester,
+                    'closed_at' => $closedAt->toISOString(),
+                ],
+                'warning'
+            );
+        } catch (\Throwable $e) {
+        }
+        return response()->json($response);
     }
 
     public function summary(Evaluation $evaluation)

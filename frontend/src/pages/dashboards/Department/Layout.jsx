@@ -68,6 +68,7 @@ function DepartmentLayout() {
 
     { path: '/students', label: 'Students', iconClass: 'bi-mortarboard' },
     { path: '/evaluations', label: 'Open Evaluations', iconClass: 'bi-pencil-square' },
+    { path: '/comments', label: 'Comments', iconClass: 'bi-chat-dots' },
     { path: '/manage-evaluations', label: 'Manage Evaluations', iconClass: 'bi-gear' },
     { path: '/hod-evaluations', label: 'HOD Evaluations', iconClass: 'bi-person-workspace' },
     { path: '/results', label: 'Results', iconClass: 'bi-bar-chart' },

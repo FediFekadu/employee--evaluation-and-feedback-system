@@ -128,10 +128,11 @@ class CourseController extends Controller
         // Reload relations to return updated course info
         $course->load('department', 'teachers');
 
-        return response()->json([
+        $response = [
             'message' => 'Instructor assigned successfully',
             'course' => $course,
-        ]);
+        ];
+        return response()->json($response);
     }
 
     /**
@@ -170,10 +171,11 @@ class CourseController extends Controller
                 $query->withPivot('year_level', 'semester');
             }]);
 
-            return response()->json([
+            $response = [
                 'message' => 'Instructor removed successfully',
                 'course' => $course
-            ]);
+            ];
+            return response()->json($response);
 
         } catch (ValidationException $e) {
             return response()->json([

@@ -11,6 +11,8 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\HodEvaluationController;
 use App\Http\Controllers\PeerEvaluationController;
+use App\Http\Controllers\DepartmentCommentController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -104,7 +106,20 @@ Route::put('/departments/{department}', [DepartmentController::class, 'update'])
 Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
 Route::post('/departments/{department}/assign-admin', [DepartmentController::class, 'assignAdmin']);
 Route::post('/departments/{department}/export', [DepartmentController::class, 'export']);
+// Department comments
+Route::post('/departments/{department}/comments', [DepartmentCommentController::class, 'store']);
+Route::get('/departments/{department}/comments', [DepartmentCommentController::class, 'index']);
+Route::get('/departments/{department}/comments/mine', [DepartmentCommentController::class, 'my']);
+Route::post('/departments/{department}/comments/{comment}/approve', [DepartmentCommentController::class, 'approve']);
+Route::post('/departments/{department}/comments/{comment}/reject', [DepartmentCommentController::class, 'reject']);
+Route::post('/departments/{department}/comments/{comment}/flag', [DepartmentCommentController::class, 'flag']);
+Route::put('/departments/{department}/comments/{comment}', [DepartmentCommentController::class, 'update']);
+Route::delete('/departments/{department}/comments/{comment}', [DepartmentCommentController::class, 'destroy']);
+Route::post('/departments/{department}/comments/{comment}/reply', [DepartmentCommentController::class, 'reply']);
 
+Route::get('/notifications', [NotificationController::class, 'index']);
+Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 // Department Template routes
 Route::get('/departments/{department}/template', [App\Http\Controllers\DepartmentTemplateController::class, 'getTemplate']);
 Route::put('/departments/{department}/template', [App\Http\Controllers\DepartmentTemplateController::class, 'updateTemplate']);

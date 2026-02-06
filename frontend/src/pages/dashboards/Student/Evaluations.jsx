@@ -250,6 +250,34 @@ function StudentEvaluations() {
     }
   }, [departmentId, refresh]);
 
+  useEffect(() => {
+    const loadNotifications = async () => {
+      const sid = typeof window !== 'undefined' ? Number(localStorage.getItem('student_db_id')) : null;
+      if (!sid) return;
+      try {
+        const res = await api.get('/notifications', {
+          params: {
+            recipient_type: 'student',
+            recipient_id: sid,
+            status: 'unread',
+            limit: 5,
+          },
+        });
+        const items = (res.data?.notifications || []).map(n => ({
+          id: n.id,
+          type: n.type,
+          message: n.message || n.title || '',
+          timestamp: new Date(n.created_at),
+          read: !!n.read_at,
+          evaluationId: n.meta?.evaluation_id || null,
+        }));
+        setNotifications(items);
+      } catch (e) {
+      }
+    };
+    loadNotifications();
+  }, [departmentId]);
+
   // Debug logging to help identify the issue
   useEffect(() => {
     const studentDbId = typeof window !== 'undefined' ? Number(localStorage.getItem('student_db_id')) : null;
@@ -740,6 +768,8 @@ function StudentEvaluations() {
         <ErrorAlert
           key={error.id}
           error={error.error}
+          autoHide
+          hideDelay={3500}
           onRetry={() => {
             removeError(error.id);
             // Implement retry logic based on error context
@@ -748,7 +778,8 @@ function StudentEvaluations() {
             }
           }}
           onDismiss={() => removeError(error.id)}
-          showDetails={process.env.NODE_ENV === 'development'}
+          showDetails={false}
+          showRecoveryOptions={false}
         />
       ))}
 
@@ -763,11 +794,15 @@ function StudentEvaluations() {
       {submissionState.submissionError && (
         <ErrorAlert
           error={{ response: { data: submissionState.submissionError } }}
+          autoHide
+          hideDelay={3500}
           onRetry={() => {
             resetSubmissionState();
             submitEvaluation();
           }}
           onDismiss={() => resetSubmissionState()}
+          showDetails={false}
+          showRecoveryOptions={false}
         />
       )}
 
@@ -796,7 +831,16 @@ function StudentEvaluations() {
       </div>
 
       {/* Evaluations List */}
-      <div className="evaluations-grid">
+      <div
+        className="evaluations-grid"
+        style={{
+          maxWidth: 860,
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gap: 12
+        }}
+      >
         {isLoading('load_evaluations') ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
@@ -850,7 +894,10 @@ function StudentEvaluations() {
                     openEval(evaluation.id);
                   }
                 }}
-                style={{ cursor: (!isSubmitted && evaluationAvailable) ? 'pointer' : 'default' }}
+                style={{
+                  cursor: (!isSubmitted && evaluationAvailable) ? 'pointer' : 'default',
+                  padding: 8
+                }}
               >
                 {/* Status Indicator Bar */}
                 <div className={`status-bar ${isSubmitted ? 'completed' : !evaluationAvailable ? 'closed' : 'open'}`}></div>
