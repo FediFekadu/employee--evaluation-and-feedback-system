@@ -2,11 +2,11 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import './styles.css';
 // SB Admin 2-inspired: Bootstrap 5 and Icons
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import './styles.css';
 
 // Polyfill for process.env in browser environment
 // This ensures compatibility with libraries that expect Node.js globals

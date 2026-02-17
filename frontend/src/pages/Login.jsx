@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
@@ -10,6 +10,27 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  // Theme management
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') || 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', theme);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   const isEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
@@ -73,6 +94,18 @@ function Login() {
 
   return (
     <div className="login-container">
+      {/* Theme Toggle */}
+      <button 
+        className="theme-toggle login-theme-toggle" 
+        onClick={toggleTheme}
+        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      >
+        <span className="theme-icon">
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </span>
+      </button>
+
       {/* Background Elements */}
       <div className="login-background">
         <div className="bg-shape shape-1"></div>

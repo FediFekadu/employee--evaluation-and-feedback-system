@@ -190,6 +190,13 @@ function SystemHeader({ theme, onToggleTheme }) {
           <span className="system-brand-text">Informatics College • Feedback & Evaluation</span>
         </Link>
 
+        <nav className="system-nav" aria-label="Primary">
+          <Link to="/" className="system-link">Home</Link>
+          <a href="#about" className="system-link">About</a>
+          <a href="#features" className="system-link">Features</a>
+          <a href="#contact" className="system-link">Contact</a>
+        </nav>
+
         <div className="system-actions">
           <button
             className="system-icon-btn"
@@ -305,7 +312,7 @@ function SystemHeader({ theme, onToggleTheme }) {
             </button>
           )}
           {!isLoggedIn && (
-            <Link className="system-btn" to="/login" aria-label="Login">
+            <Link className="system-btn system-btn-primary" to="/login" aria-label="Login">
               Login
             </Link>
           )}

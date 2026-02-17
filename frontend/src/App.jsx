@@ -140,29 +140,92 @@ function App() {
             <Route
               path="/"
               element={
-                <div className="hero">
-                  <h1>Student Feedback & Teacher Evaluation System</h1>
-                  <p>
-                    A secure, role‑based platform for collecting student feedback, managing
-                    department courses and evaluations, and providing insightful reports for teachers
-                    and administrators.
-                  </p>
-                  <div className="cta">
-                    <Link className="btn btn-primary" to="/login">Get Started</Link>
-                    <a className="btn btn-ghost" href="#features">Learn More</a>
-                  </div>
-                  <section id="features" className="grid">
-                    <div className="card">
+                <div className="homepage">
+                  <section className="hero">
+                    <h1>Student Feedback & Teacher Evaluation System</h1>
+                    <p>
+                      A secure, role‑based platform for collecting student feedback, managing
+                      department courses and evaluations, and providing insightful reports for teachers
+                      and administrators.
+                    </p>
+                    <div className="cta">
+                      <Link className="btn btn-primary" to="/login">Get Started</Link>
+                      <a className="btn btn-ghost" href="#features">Learn More</a>
+                    </div>
+                  </section>
+
+                  <section className="grid role-cards" aria-label="Roles">
+                    <Link to="/login" className="card role-card role-card-click">
+                      <div className="card-icon"><i className="bi bi-mortarboard"></i></div>
                       <h3>Students</h3>
-                      <p>Evaluate assigned courses with privacy by default; optionally reveal identity.</p>
-                    </div>
-                    <div className="card">
-                      <h3>Department Admin</h3>
-                      <p>Manage semesters, post courses, assign teachers, and open evaluations.</p>
-                    </div>
-                    <div className="card">
+                      <p>Evaluate assigned courses with privacy.</p>
+                      <div className="card-actions">
+                        <span className="card-link">Access <i className="bi bi-arrow-right"></i></span>
+                      </div>
+                    </Link>
+                    <Link to="/login" className="card role-card role-card-click">
+                      <div className="card-icon"><i className="bi bi-building"></i></div>
+                      <h3>Department</h3>
+                      <p>Manage feedback, comments, results and open/close evaluations.</p>
+                      <div className="card-actions">
+                        <span className="card-link">Access <i className="bi bi-arrow-right"></i></span>
+                      </div>
+                    </Link>
+                    <Link to="/login" className="card role-card role-card-click">
+                      <div className="card-icon"><i className="bi bi-person-badge"></i></div>
                       <h3>Teachers</h3>
                       <p>View aggregated feedback and peer evaluations to improve teaching quality.</p>
+                      <div className="card-actions">
+                        <span className="card-link">Access <i className="bi bi-arrow-right"></i></span>
+                      </div>
+                    </Link>
+                  </section>
+
+                  <section id="features" className="features">
+                    <div className="container">
+                      <div className="features-grid">
+                        <div className="feature-item">
+                          <span className="feature-icon"><i className="bi bi-shield-lock"></i></span>
+                          <div className="feature-content">
+                            <h4>Secure Evaluations</h4>
+                            <p>Protected submissions with privacy‑first design.</p>
+                          </div>
+                        </div>
+                        <div className="feature-item">
+                          <span className="feature-icon"><i className="bi bi-people"></i></span>
+                          <div className="feature-content">
+                            <h4>Role‑based Access</h4>
+                            <p>Students, departments and teachers get tailored views.</p>
+                          </div>
+                        </div>
+                        <div className="feature-item">
+                          <span className="feature-icon"><i className="bi bi-graph-up-arrow"></i></span>
+                          <div className="feature-content">
+                            <h4>Analytics</h4>
+                            <p>Actionable reports and rankings for decision making.</p>
+                          </div>
+                        </div>
+                        <div className="feature-item">
+                          <span className="feature-icon"><i className="bi bi-bell"></i></span>
+                          <div className="feature-content">
+                            <h4>Notifications</h4>
+                            <p>Timely updates on openings and results.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+               
+                  <section id="about" className="about">
+                    <div className="container">
+                      <p className="about-text">Built for academic institutions to streamline course evaluations and improve teaching quality.</p>
+                    </div>
+                  </section>
+
+                  <section id="contact" className="contact">
+                    <div className="container">
+                      <p className="contact-text">Need access? Use your institutional account to sign in.</p>
                     </div>
                   </section>
                 </div>

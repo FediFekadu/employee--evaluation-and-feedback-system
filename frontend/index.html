@@ -7,7 +7,15 @@
     <script>
       (function() {
         try {
-          var theme = localStorage.getItem('theme') || 'light';
+          var theme = localStorage.getItem('theme');
+          if (!theme) {
+            // Check system preference if no stored theme
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+              theme = 'dark';
+            } else {
+              theme = 'light';
+            }
+          }
           document.documentElement.setAttribute('data-theme', theme);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'light');
