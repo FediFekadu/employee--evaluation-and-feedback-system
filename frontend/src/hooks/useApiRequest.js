@@ -78,10 +78,13 @@ export function useApiRequest() {
 
       // Create enhanced API call with retry logic
       const enhancedApiCall = createEnhancedApiCall(async () => {
+        // Ensure a fresh AbortController for each attempt (including retries)
+        const ac = new AbortController();
+        abortController.current = ac;
         const requestConfig = {
           method,
           url,
-          signal: abortController.current.signal,
+          signal: ac.signal,
           timeout
         };
 

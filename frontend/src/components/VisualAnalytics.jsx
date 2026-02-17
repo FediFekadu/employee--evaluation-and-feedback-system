@@ -53,7 +53,13 @@ function VisualAnalytics({
       };
 
       if (period) {
-        params.period = period;
+        if (typeof period === 'string' && period.includes(':')) {
+          const [from, to] = period.split(':');
+          params.from_date = from;
+          params.to_date = to || from;
+        } else {
+          params.period = period;
+        }
       }
 
       const response = await get(

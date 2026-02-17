@@ -337,6 +337,10 @@ export class RetryManager {
     enhancedError.stack = originalError.stack;
     enhancedError.originalError = originalError;
     enhancedError.retryInfo = retryInfo;
+    enhancedError.response = originalError.response || enhancedError.response;
+    enhancedError.code = originalError.code || enhancedError.code;
+    enhancedError.config = originalError.config || enhancedError.config;
+    enhancedError.request = originalError.request || enhancedError.request;
     
     // Add user-friendly information
     const errorInfo = getErrorInfo(originalError);
@@ -592,7 +596,16 @@ export function createEnhancedApiCall(apiFunction, context = '') {
             throw error;
           }
         },
-        context
+        context,
+        {
+          retryCondition: (err) => {
+            const type = categorizeError(err);
+            if (context.includes('report') || context.includes('export')) {
+              return type === ERROR_TYPES.NETWORK || type === ERROR_TYPES.TIMEOUT;
+            }
+            return retryManager.isRetryable(err);
+          }
+        }
       );
       
       return result;

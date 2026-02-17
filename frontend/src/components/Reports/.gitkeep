@@ -1,0 +1,12 @@
+# Reports Dashboard Components Directory
+
+This directory contains all React components for the Department Reports Dashboard feature.
+
+## Structure:
+- Analytics/ - Analytics dashboard components (metrics cards, quick insights)
+- Charts/ - Chart components (performance distribution, trends, comparisons)
+- DataQuality/ - Data quality monitoring components
+- Export/ - Export controls and related components
+- Filters/ - Filter panel and filter-related components
+- Rankings/ - Teacher ranking tables and components
+- Shared/ - Shared/reusable components across the Reports feature

@@ -12,7 +12,7 @@ let isProcessing = false;
 // Configuration
 const CONFIG = {
   maxConcurrentRequests: 3,
-  requestDelay: 200, // 200ms between requests
+  requestDelay: 500,
   cacheTimeout: 300000, // 5 minutes
   retryDelay: 1000,
   maxRetries: 2
@@ -60,7 +60,12 @@ async function processQueue() {
   const activeBatch = [];
 
   try {
-    while (requestQueue.length > 0 && activeBatch.length < CONFIG.maxConcurrentRequests) {
+    // Determine concurrency based on highest-priority item
+    requestQueue.sort((a, b) => a.priority - b.priority);
+    const highestPriority = requestQueue[0]?.priority ?? PRIORITY.NORMAL;
+    const concurrencyLimit = highestPriority === PRIORITY.LOW ? 1 : CONFIG.maxConcurrentRequests;
+
+    while (requestQueue.length > 0 && activeBatch.length < concurrencyLimit) {
       // Sort by priority and take the highest priority request
       requestQueue.sort((a, b) => a.priority - b.priority);
       const request = requestQueue.shift();
