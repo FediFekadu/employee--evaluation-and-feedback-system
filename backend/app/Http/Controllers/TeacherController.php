@@ -93,6 +93,16 @@ class TeacherController extends Controller
         return response()->json($out);
     }
 
+    // Delete a teacher
+    public function destroy(Teacher $teacher)
+    {
+        // Detach from all courses
+        $teacher->courses()->detach();
+        // Delete the teacher
+        $teacher->delete();
+        return response()->json(['message' => 'Instructor deleted successfully']);
+    }
+
     // Upload or update a teacher's profile photo
     public function uploadPhoto(Request $request, Teacher $teacher)
     {

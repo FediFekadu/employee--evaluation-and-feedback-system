@@ -62,6 +62,15 @@ class CourseController extends Controller
         return response()->json($course->load('department', 'teachers'));
     }
 
+    public function destroy(Course $course)
+    {
+        // Detach all teachers
+        $course->teachers()->detach();
+        // Delete the course
+        $course->delete();
+        return response()->json(['message' => 'Course deleted successfully']);
+    }
+
     /**
      * Assign a teacher to a course.
      */

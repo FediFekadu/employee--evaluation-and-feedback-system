@@ -121,6 +121,11 @@
   --font-bold: 700;
   --font-extrabold: 800;
 
+  /* Semantic Font Weights */
+  --font-weight-body: var(--font-normal);
+  --font-weight-button: var(--font-medium);
+  --font-weight-heading: var(--font-bold);
+
   /* Line Heights */
   --leading-tight: 1.25;
   --leading-snug: 1.375;
@@ -178,66 +183,79 @@
 
 /* ===== TYPOGRAPHY SYSTEM ===== */
 
+/* Global Font Assignments */
+body {
+  font-weight: var(--font-weight-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-heading);
+}
+
+button, .btn, .enhanced-btn {
+  font-weight: var(--font-weight-button);
+}
+
 .text-display {
   font-size: var(--text-5xl);
-  font-weight: var(--font-bold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-tight);
   letter-spacing: -0.025em;
 }
 
 .text-heading-1 {
   font-size: var(--text-4xl);
-  font-weight: var(--font-bold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-tight);
   letter-spacing: -0.025em;
 }
 
 .text-heading-2 {
   font-size: var(--text-3xl);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-snug);
   letter-spacing: -0.025em;
 }
 
 .text-heading-3 {
   font-size: var(--text-2xl);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-snug);
 }
 
 .text-heading-4 {
   font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-snug);
 }
 
 .text-heading-5 {
   font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-snug);
 }
 
 .text-heading-6 {
   font-size: var(--text-base);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-weight-heading);
   line-height: var(--leading-normal);
 }
 
 .text-body-large {
   font-size: var(--text-lg);
-  font-weight: var(--font-normal);
+  font-weight: var(--font-weight-body);
   line-height: var(--leading-relaxed);
 }
 
 .text-body {
   font-size: var(--text-base);
-  font-weight: var(--font-normal);
+  font-weight: var(--font-weight-body);
   line-height: var(--leading-normal);
 }
 
 .text-body-small {
   font-size: var(--text-sm);
-  font-weight: var(--font-normal);
+  font-weight: var(--font-weight-body);
   line-height: var(--leading-normal);
 }
 

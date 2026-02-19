@@ -48,6 +48,7 @@ Route::get('/courses', [CourseController::class, 'index']);
 Route::post('/courses', [CourseController::class, 'store']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
 Route::put('/courses/{course}', [CourseController::class, 'update']);
+Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
 Route::post('/courses/{id}/assign-teacher', [CourseController::class, 'assignTeacher']);
 Route::post('/courses/{id}/remove-teacher', [CourseController::class, 'removeTeacher']);
 // Course comments aggregation (teacher view)
@@ -153,6 +154,7 @@ Route::delete('/department-admins/{user}', [DepartmentController::class, 'delete
 // Teachers (Instructors)
 Route::get('/teachers', [TeacherController::class, 'index']);
 Route::post('/teachers', [TeacherController::class, 'store']);
+Route::delete('/teachers/{teacher}', [TeacherController::class, 'destroy']);
 Route::get('/teachers/{teacher}', [TeacherController::class, 'show']);
 Route::post('/teachers/{teacher}/photo', [TeacherController::class, 'uploadPhoto']);
 

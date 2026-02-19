@@ -200,6 +200,50 @@ function DepartmentCoursesAndInstructors() {
     }
   };
 
+  // Delete course function
+  const deleteCourse = async (courseId) => {
+    if (!window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/courses/${courseId}`);
+      setDepartment((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          courses: prev.courses.filter(c => c.id !== courseId)
+        };
+      });
+      alert('Course deleted successfully');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete course');
+    }
+  };
+
+  // Delete instructor function
+  const deleteInstructor = async (instructorId) => {
+    if (!window.confirm('Are you sure you want to delete this instructor? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/teachers/${instructorId}`);
+      setDepartment((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          teachers: prev.teachers.filter(t => t.id !== instructorId)
+        };
+      });
+      alert('Instructor deleted successfully');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete instructor');
+    }
+  };
+
   // Get assigned instructors for selected course and semester
   const getAssignedInstructors = () => {
     if (!removeForm.course_id || !removeForm.semester) return [];
@@ -473,14 +517,25 @@ function DepartmentCoursesAndInstructors() {
 
                       <div className="course-actions compact" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         <span className="status-badge active" style={{ fontSize: 11, padding: '2px 6px' }}>Active</span>
-                        <button className="action-btn" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => setActiveTab('assign')}>Assign</button>
-                        <button className="action-btn" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => {
-                          setAssignForm(prev => ({ ...prev, course_id: String(course.id) }));
-                          setActiveTab('assign');
-                        }}>Quick Assign</button>
                         <button 
-                          className="action-btn remove" 
-                          style={{ fontSize: 12, padding: '4px 8px' }}
+                          onClick={() => {
+                            setAssignForm(prev => ({ ...prev, course_id: String(course.id) }));
+                            setActiveTab('assign');
+                          }}
+                          style={{ 
+                            fontSize: '11px', 
+                            padding: '4px 10px', 
+                            borderRadius: '6px', 
+                            border: '1px solid var(--border-medium)', 
+                            background: 'white', 
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                          }}
+                        >
+                          Assign
+                        </button>
+                        <button 
                           onClick={() => {
                             if ((course.teachers || []).length > 0) {
                               setRemoveForm(prev => ({ ...prev, course_id: String(course.id) }));
@@ -489,8 +544,38 @@ function DepartmentCoursesAndInstructors() {
                               alert('No instructors assigned to this course.');
                             }
                           }}
+                          title="Remove instructor from course"
+                          style={{ 
+                            fontSize: '11px', 
+                            padding: '4px 10px', 
+                            borderRadius: '6px', 
+                            border: '1px solid var(--border-medium)', 
+                            background: 'white', 
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                          }}
                         >
-                          Remove
+                          Unassign
+                        </button>
+                        <button 
+                          onClick={() => deleteCourse(course.id)}
+                          title="Delete Course"
+                          style={{ 
+                            background: '#fee2e2', 
+                            border: '1px solid #fecaca', 
+                            color: '#dc2626', 
+                            cursor: 'pointer', 
+                            width: 26,
+                            height: 26,
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 0
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
                       </div>
                     </div>
@@ -518,9 +603,8 @@ function DepartmentCoursesAndInstructors() {
             </div>
           </div>
 
-          {/* Instructors Grid */}
-          <div className="instructors-grid-container">
-            <div className="instructors-grid compact">
+          {/* Instructors List */}
+          <div className="courses-list-container">
             {filteredInstructors.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">👨‍🏫</div>
@@ -534,128 +618,194 @@ function DepartmentCoursesAndInstructors() {
                 </button>
               </div>
             ) : (
-              filteredInstructors.map((instructor) => {
-                const details = detailsById[instructor.id];
-                const coursesCount = details?.courses?.length ?? instructor.courses?.length ?? '—';
-                const evaluationsCount = details?.evaluations?.length ?? instructor.evaluations?.length ?? '—';
+              <div className="courses-list compact-rows">
+                {filteredInstructors.map((instructor) => {
+                  const details = detailsById[instructor.id];
+                  const coursesCount = details?.courses?.length ?? instructor.courses?.length ?? '—';
+                  const evaluationsCount = details?.evaluations?.length ?? instructor.evaluations?.length ?? '—';
 
-                return (
-                  <div key={instructor.id} className={`instructor-card compact ${expandedId === instructor.id ? 'expanded' : ''}`}>
-                    <div className="card-top">
-                      <div className="instructor-avatar small">
-                        {instructor.photo_url ? (
-                          <img src={instructor.photo_url} alt={instructor.name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
-                        ) : (
-                          instructor.name.charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <div className="instructor-info">
-                        <div className="name-row">
-                          <span className="instructor-name">{instructor.name}</span>
-                          {instructor.title && (
-                            <span className="title-badge">{instructor.title}</span>
-                          )}
+                  return (
+                    <div key={instructor.id} style={{ marginBottom: 8 }}>
+                      <div 
+                        className="course-row"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'auto 1fr auto',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 10px',
+                          border: '1px solid var(--neutral-200)',
+                          borderRadius: 8,
+                          background: 'var(--neutral-50)',
+                          cursor: 'default',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        {/* Avatar */}
+                        <div className="instructor-avatar" style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--neutral-200)', flexShrink: 0 }}>
+                          <img 
+                            src={instructor.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(instructor.name)}&background=0D8ABC&color=fff&size=128&bold=true`}
+                            alt={instructor.name}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(instructor.name)}&background=0D8ABC&color=fff&size=128&bold=true`;
+                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
                         </div>
-                        <div className="meta-row">
-                          <span
-                            className="email-text"
-                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                          >
-                            {instructor.email || '—'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="compact-stats">
-                        <div className="stat-chip">
-                          <span className="label">Courses</span>
-                          <span className="value">{coursesCount}</span>
-                          {loadingDetailsId === instructor.id && <span className="loading-dot" style={{ color: 'var(--text-muted)', marginLeft: 2 }}>•</span>}
-                        </div>
-                        <div className="stat-chip">
-                          <span className="label">Evaluations</span>
-                          <span className="value">{evaluationsCount}</span>
-                          {loadingDetailsId === instructor.id && <span className="loading-dot" style={{ color: 'var(--text-muted)', marginLeft: 2 }}>•</span>}
-                        </div>
-                      </div>
-                      <div className="card-actions">
-                        <button
-                          className="action-btn view"
-                          onClick={() => toggleExpand(instructor.id)}
-                          title={expandedId === instructor.id ? 'Hide details' : 'View details'}
-                        >
-                          {expandedId === instructor.id ? 'Hide' : 'Details'}
-                        </button>
-                        <button 
-                          className="action-btn edit" 
-                          onClick={() => setActiveTab('courses')}
-                          title="View courses"
-                        >
-                          Courses
-                        </button>
-                      </div>
-                    </div>
 
-                    {expandedId === instructor.id && (
-                      <div className="card-details">
-                        {loadingDetailsId === instructor.id && !details && (
-                          <div className="loading-inline">
-                            <span className="loading-spinner small"></span>
-                            Loading details...
+                        {/* Main Info */}
+                        <div className="course-main-compact" style={{ minWidth: 0 }}>
+                          <div className="title-row" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <h3 className="course-title" style={{ fontSize: 14, margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>{instructor.name}</h3>
+                            {instructor.title && (
+                              <span className="course-code-badge" style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', whiteSpace: 'nowrap' }}>
+                                {instructor.title}
+                              </span>
+                            )}
                           </div>
-                        )}
+                          
+                          <div className="meta-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
+                             <span style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                               {instructor.email || '—'}
+                             </span>
+                             <span style={{ width: 1, height: 12, background: 'var(--neutral-300)' }}></span>
+                             <span style={{ display: 'flex', gap: 8 }}>
+                               <span><strong>{coursesCount}</strong> Courses</span>
+                               <span><strong>{evaluationsCount}</strong> Evals</span>
+                             </span>
+                          </div>
+                        </div>
 
-                        {details && (
-                          <>
-                            <div className="courses-list">
-                              <div className="section-title">Assigned Courses</div>
-                              {details.courses?.length ? (
-                                <div className="course-list">
-                                  {details.courses.map((course) => (
-                                    <div key={course.id} className="course-list-item">
-                                      {course.code} • {course.title}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="empty-inline">No courses assigned</div>
-                              )}
-                            </div>
-
-                            <div className="evaluations-summary">
-                              <div className="section-title">Evaluations</div>
-                              <div className="summary-row">
-                                {(() => {
-                                  const evals = details.evaluations || [];
-                                  const today = new Date();
-                                  const openCount = evals.filter(e => {
-                                    const opened = e.opened_at ? new Date(e.opened_at) : null;
-                                    const closed = e.closed_at ? new Date(e.closed_at) : null;
-                                    return opened && opened <= today && (!closed || closed >= today);
-                                  }).length;
-                                  const closedCount = evals.length - openCount;
-                                  return (
-                                    <>
-                                      <div className="summary-chip">Total <span className="value">{evals.length}</span></div>
-                                      <div className="summary-chip">Open <span className="value">{openCount}</span></div>
-                                      <div className="summary-chip">Closed <span className="value">{closedCount}</span></div>
-                                    </>
-                                  );
-                                })()}
-                                <a className="summary-link" href={`/department/${deptId}/results`}>
-                                  View Results
-                                </a>
-                              </div>
-                            </div>
-                          </>
-                        )}
+                        {/* Actions */}
+                        <div className="course-actions compact" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                           <button 
+                             onClick={() => toggleExpand(instructor.id)}
+                             style={{ 
+                               fontSize: '11px', 
+                               padding: '4px 10px', 
+                               borderRadius: '6px', 
+                               border: '1px solid var(--border-medium)', 
+                               background: 'white', 
+                               color: 'var(--text-primary)',
+                               cursor: 'pointer',
+                               fontWeight: 500,
+                               whiteSpace: 'nowrap'
+                             }}
+                           >
+                             {expandedId === instructor.id ? 'Close' : 'Details'}
+                           </button>
+                           <button 
+                             onClick={() => setActiveTab('courses')}
+                             style={{ 
+                               fontSize: '11px', 
+                               padding: '4px 10px', 
+                               borderRadius: '6px', 
+                               border: '1px solid var(--border-medium)', 
+                               background: 'white', 
+                               color: 'var(--text-primary)',
+                               cursor: 'pointer',
+                               fontWeight: 500
+                             }}
+                           >
+                             Courses
+                           </button>
+                           <button 
+                              onClick={() => deleteInstructor(instructor.id)}
+                              title="Delete Instructor"
+                              style={{ 
+                                background: '#fee2e2', 
+                                border: '1px solid #fecaca', 
+                                color: '#dc2626', 
+                                cursor: 'pointer', 
+                                width: 26,
+                                height: 26,
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0
+                              }}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })
+
+                      {/* Details Panel */}
+                      {expandedId === instructor.id && (
+                         <div className="card-details" style={{ 
+                           marginTop: -4, 
+                           marginLeft: 10, 
+                           marginRight: 10, 
+                           border: '1px solid var(--border-soft)', 
+                           borderTop: 'none', 
+                           borderBottomLeftRadius: 8, 
+                           borderBottomRightRadius: 8, 
+                           background: 'white', 
+                           padding: 16 
+                         }}>
+                           {loadingDetailsId === instructor.id && !details && (
+                             <div className="loading-inline">
+                               <span className="loading-spinner small"></span>
+                               Loading details...
+                             </div>
+                           )}
+
+                           {details && (
+                             <>
+                               <div className="courses-list">
+                                 <div className="section-title" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assigned Courses</div>
+                                 {details.courses?.length ? (
+                                   <div className="course-list" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                     {details.courses.map((course) => (
+                                       <div key={course.id} className="course-list-item" style={{ fontSize: '12px', padding: '4px 8px', background: 'var(--bg-secondary)', borderRadius: 4, border: '1px solid var(--border-soft)' }}>
+                                         <span style={{ fontWeight: 600, marginRight: 6 }}>{course.code}</span>
+                                         <span style={{ color: 'var(--text-secondary)' }}>{course.title}</span>
+                                       </div>
+                                     ))}
+                                   </div>
+                                 ) : (
+                                   <div className="empty-inline" style={{ fontSize: 13, color: 'var(--text-muted)' }}>No courses assigned</div>
+                                 )}
+                               </div>
+
+                               <div className="evaluations-summary" style={{ marginTop: 16 }}>
+                                 <div className="section-title" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Evaluations</div>
+                                 <div className="summary-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                   <div style={{ display: 'flex', gap: 8 }}>
+                                     {(() => {
+                                       const evals = details.evaluations || [];
+                                       const today = new Date();
+                                       const openCount = evals.filter(e => {
+                                         const opened = e.opened_at ? new Date(e.opened_at) : null;
+                                         const closed = e.closed_at ? new Date(e.closed_at) : null;
+                                         return opened && opened <= today && (!closed || closed >= today);
+                                       }).length;
+                                       return (
+                                         <>
+                                           <div className="summary-chip" style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-soft)' }}>Total <strong>{evals.length}</strong></div>
+                                           <div className="summary-chip" style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981' }}>Open <strong>{openCount}</strong></div>
+                                         </>
+                                       );
+                                     })()}
+                                   </div>
+                                   <a className="summary-link" href={`/department/${deptId}/results`} style={{ fontSize: '12px', fontWeight: 500, color: '#3b82f6', textDecoration: 'none' }}>
+                                     View Results →
+                                   </a>
+                                  </div>
+                               </div>
+                             </>
+                           )}
+                         </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
-        </div>
         </div>
       )}
 
@@ -899,27 +1049,14 @@ function DepartmentCoursesAndInstructors() {
                   className="form-select" 
                   value={assignForm.teacher_id} 
                   onChange={(e) => setAssignForm((f) => ({ ...f, teacher_id: e.target.value }))}
-                  disabled={!assignForm.course_id || !assignForm.semester}
                 >
-                  <option value="">
-                    {!assignForm.course_id || !assignForm.semester 
-                      ? 'Select course and semester first' 
-                      : availableTeachers.length === 0 
-                        ? 'No available instructors for this course/semester'
-                        : 'Select instructor'
-                    }
-                  </option>
+                  <option value="">Select instructor</option>
                   {availableTeachers.map((t) => (
                     <option key={t.id} value={String(t.id)}>
                       {t.name}
                     </option>
                   ))}
                 </select>
-                {assignForm.course_id && assignForm.semester && availableTeachers.length === 0 && (
-                  <small className="form-hint error">
-                    All instructors are already assigned to this course for {assignForm.semester}
-                  </small>
-                )}
               </div>
               
               <div className="form-group">
@@ -939,8 +1076,8 @@ function DepartmentCoursesAndInstructors() {
             <div className="form-actions">
               <button 
                 className="dept-btn dept-btn-primary" 
-                disabled={assignSubmitting || !assignForm.course_id || !assignForm.teacher_id || availableTeachers.length === 0} 
-                onClick={assignInstructor}
+                onClick={assignInstructor} 
+                disabled={assignSubmitting}
               >
                 {assignSubmitting ? (
                   <>
@@ -961,7 +1098,7 @@ function DepartmentCoursesAndInstructors() {
           <div className="form-section">
             <div className="form-header">
               <h2>Remove Instructor from Course</h2>
-              <p>Remove instructor assignments from specific courses</p>
+              <p>Unassign an instructor from a specific course offering</p>
             </div>
             
             <div className="form-grid">
@@ -970,16 +1107,10 @@ function DepartmentCoursesAndInstructors() {
                 <select 
                   className="form-select" 
                   value={removeForm.course_id} 
-                  onChange={(e) => {
-                    setRemoveForm((f) => ({ 
-                      ...f, 
-                      course_id: e.target.value, 
-                      teacher_id: '' 
-                    }));
-                  }}
+                  onChange={(e) => setRemoveForm((f) => ({ ...f, course_id: e.target.value, teacher_id: '' }))}
                 >
                   <option value="">Select course</option>
-                  {courseOptions.filter(c => (c.teachers || []).length > 0).map((c) => (
+                  {courseOptions.map((c) => (
                     <option key={c.id} value={String(c.id)}>
                       {c.title} ({c.code})
                     </option>
@@ -992,13 +1123,7 @@ function DepartmentCoursesAndInstructors() {
                 <select 
                   className="form-select" 
                   value={removeForm.semester} 
-                  onChange={(e) => {
-                    setRemoveForm((f) => ({ 
-                      ...f, 
-                      semester: e.target.value, 
-                      teacher_id: '' 
-                    }));
-                  }}
+                  onChange={(e) => setRemoveForm((f) => ({ ...f, semester: e.target.value, teacher_id: '' }))}
                 >
                   <option value="Semester I">Semester I</option>
                   <option value="Semester II">Semester II</option>
@@ -1011,72 +1136,26 @@ function DepartmentCoursesAndInstructors() {
                   className="form-select" 
                   value={removeForm.teacher_id} 
                   onChange={(e) => setRemoveForm((f) => ({ ...f, teacher_id: e.target.value }))}
-                  disabled={!removeForm.course_id || !removeForm.semester}
+                  disabled={!removeForm.course_id}
                 >
-                  <option value="">
-                    {!removeForm.course_id || !removeForm.semester 
-                      ? 'Select course and semester first' 
-                      : getAssignedInstructors().length === 0 
-                        ? 'No instructors assigned for this course/semester'
-                        : 'Select instructor to remove'
-                    }
-                  </option>
-                  {getAssignedInstructors().map((instructor) => (
-                    <option key={instructor.id} value={String(instructor.id)}>
-                      {instructor.name} (Year {instructor.year_level})
+                  <option value="">Select instructor</option>
+                  {getAssignedInstructors().map((t) => (
+                    <option key={t.id} value={String(t.id)}>
+                      {t.name} (Year {t.year_level})
                     </option>
                   ))}
                 </select>
+                {removeForm.course_id && getAssignedInstructors().length === 0 && (
+                  <small className="form-hint error">No instructors assigned to this course for {removeForm.semester}</small>
+                )}
               </div>
             </div>
             
-            {removeForm.course_id && removeForm.teacher_id && (
-              <div className="remove-preview">
-                <h3>Removal Preview</h3>
-                <div className="preview-card warning">
-                  <div className="preview-row">
-                    <span className="preview-label">Course:</span>
-                    <span className="preview-value">
-                      {courseOptions.find(c => c.id === Number(removeForm.course_id))?.title} 
-                      ({courseOptions.find(c => c.id === Number(removeForm.course_id))?.code})
-                    </span>
-                  </div>
-                  <div className="preview-row">
-                    <span className="preview-label">Semester:</span>
-                    <span className="preview-value">{removeForm.semester}</span>
-                  </div>
-                  <div className="preview-row">
-                    <span className="preview-label">Instructor to Remove:</span>
-                    <span className="preview-value remove">
-                      {getAssignedInstructors().find(i => i.id === Number(removeForm.teacher_id))?.name}
-                      {' '}(Year {getAssignedInstructors().find(i => i.id === Number(removeForm.teacher_id))?.year_level})
-                    </span>
-                  </div>
-                  <div className="warning-message">
-                    <span className="warning-icon">⚠️</span>
-                    <span>This action will remove the instructor's assignment from this course. This cannot be undone.</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
             <div className="form-actions">
               <button 
-                className="dept-btn dept-btn-ghost"
-                onClick={() => {
-                  setRemoveForm({ 
-                    course_id: '', 
-                    teacher_id: '', 
-                    semester: 'Semester I' 
-                  });
-                }}
-              >
-                Clear Form
-              </button>
-              <button 
                 className="dept-btn dept-btn-danger" 
-                disabled={removeSubmitting || !removeForm.course_id || !removeForm.teacher_id || getAssignedInstructors().length === 0} 
-                onClick={removeInstructor}
+                onClick={removeInstructor} 
+                disabled={removeSubmitting}
               >
                 {removeSubmitting ? (
                   <>

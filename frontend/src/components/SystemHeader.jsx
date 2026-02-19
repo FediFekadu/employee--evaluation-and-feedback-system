@@ -190,12 +190,14 @@ function SystemHeader({ theme, onToggleTheme }) {
           <span className="system-brand-text">Informatics College • Feedback & Evaluation</span>
         </Link>
 
-        <nav className="system-nav" aria-label="Primary">
-          <Link to="/" className="system-link">Home</Link>
-          <a href="#about" className="system-link">About</a>
-          <a href="#features" className="system-link">Features</a>
-          <a href="#contact" className="system-link">Contact</a>
-        </nav>
+        {!isLoggedIn && (
+          <nav className="system-nav" aria-label="Primary">
+            <Link to="/" className="system-link">Home</Link>
+            <a href="#about" className="system-link">About</a>
+            <a href="#features" className="system-link">Features</a>
+            <a href="#contact" className="system-link">Contact</a>
+          </nav>
+        )}
 
         <div className="system-actions">
           <button
