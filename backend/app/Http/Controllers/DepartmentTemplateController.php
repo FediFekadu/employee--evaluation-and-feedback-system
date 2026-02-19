@@ -46,7 +46,7 @@ class DepartmentTemplateController extends Controller
             'questions' => 'required|array|min:1',
             'questions.*.text' => 'required|string',
             'questions.*.type' => 'required|in:rating,text',
-            'questions.*.section' => 'nullable|string|max:10',
+            'questions.*.section' => 'nullable|string',
         ]);
 
         $audience = strtolower($request->query('audience', 'student'));
@@ -88,7 +88,7 @@ class DepartmentTemplateController extends Controller
                     'template_id' => $template->id,
                     'text' => $questionData['text'],
                     'type' => $questionData['type'],
-                    'section' => $questionData['section'] ?? null,
+                    'section' => null, // Sections removed as requested
                     'order' => $index + 1,
                 ]);
             }

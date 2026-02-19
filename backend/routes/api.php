@@ -39,9 +39,12 @@ Route::middleware(['auth:sanctum', 'websocket.auth'])->post('/broadcasting/auth'
 // Auth routes for SPA
 Route::post('/auth/login/student', [AuthController::class, 'loginStudent']);
 Route::post('/auth/login/student-password', [AuthController::class, 'loginStudentPassword']);
-Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
+});
 
 // Public/basic endpoints for initial scaffolding
 Route::get('/courses', [CourseController::class, 'index']);
@@ -136,8 +139,12 @@ Route::get('/departments/{department}/hod-template', [App\Http\Controllers\HodTe
 Route::put('/departments/{department}/hod-template', [App\Http\Controllers\HodTemplateController::class, 'updateTemplate']);
 
 // HOD Evaluations
-Route::get('/departments/{department}/hod-evaluations', [HodEvaluationController::class, 'index']);
-Route::post('/hod-evaluations/{hodEvaluation}/score', [HodEvaluationController::class, 'setScore'])->middleware('role:hod,department_admin');
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/departments/{department}/hod-evaluations', [HodEvaluationController::class, 'index']);
+    Route::post('/departments/{department}/hod-evaluations', [HodEvaluationController::class, 'store']);
+    Route::get('/hod-evaluations/{hodEvaluation}', [HodEvaluationController::class, 'show']);
+    Route::post('/hod-evaluations/{hodEvaluation}/submit', [HodEvaluationController::class, 'submitEvaluation'])->middleware('role:hod,department_admin');
+});
 
 // Peer Evaluations
 Route::get('/peer-evaluations/{peerEvaluation}', [PeerEvaluationController::class, 'show']);

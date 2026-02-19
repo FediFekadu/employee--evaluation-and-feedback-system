@@ -40,18 +40,21 @@ function Login() {
     setError('');
     const input = String(credential || '').trim();
     try {
-      await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
+      // For token-based auth, we don't need CSRF cookie, but keeping it harmless
+      // await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', { withCredentials: true });
 
       if (isEmail(input)) {
         // Staff/admin/teacher login via email
-        const res = await api.post('/auth/login', { email: input, password }, { withCredentials: true });
+        const res = await api.post('/auth/login', { email: input, password });
 
         const role = res?.data?.user?.role;
         const deptId = res?.data?.user?.department_id;
         const teacherId = res?.data?.user?.teacher_id;
+        const token = res?.data?.token;
 
         if (role && typeof window !== 'undefined') {
           localStorage.setItem('auth_role', role);
+          if (token) localStorage.setItem('auth_token', token);
           if (deptId) localStorage.setItem('department_id', String(deptId));
           if (teacherId) localStorage.setItem('teacher_id', String(teacherId));
         }
@@ -66,16 +69,18 @@ function Login() {
         const res = await api.post('/auth/login/student-password', {
           student_id: input,
           password
-        }, { withCredentials: true });
+        });
 
         const role = res?.data?.user?.role || 'student';
         const deptId = res?.data?.user?.department_id;
         const studentDeptId = res?.data?.student?.department_id;
         const studentDbId = res?.data?.student?.id;
         const studentInfo = res?.data?.student;
+        const token = res?.data?.token;
 
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_role', role);
+          if (token) localStorage.setItem('auth_token', token);
           localStorage.setItem('student_id', String(input));
           const effectiveDeptId = deptId || studentDeptId;
           if (effectiveDeptId) localStorage.setItem('department_id', String(effectiveDeptId));

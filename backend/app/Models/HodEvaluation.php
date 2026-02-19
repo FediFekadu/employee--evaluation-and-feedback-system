@@ -38,4 +38,9 @@ class HodEvaluation extends Model
     {
         return $this->belongsTo(User::class, 'hod_user_id');
     }
+
+    public function responses()
+    {
+        return $this->hasMany(HodEvaluationResponse::class, 'hod_evaluation_id');
+    }
 }

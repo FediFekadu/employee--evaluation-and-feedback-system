@@ -118,6 +118,11 @@ function App() {
     } finally {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_role');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('department_id');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('student_id');
+        localStorage.removeItem('teacher_id');
       }
       navigate('/login');
     }

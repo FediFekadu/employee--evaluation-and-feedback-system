@@ -42,6 +42,7 @@ function CollegeAdminLayout() {
     try { /* optional API: await api.post('/auth/logout') */ } catch {}
     try {
       localStorage.removeItem('auth_role');
+      localStorage.removeItem('auth_token');
       localStorage.removeItem('department_id');
       localStorage.removeItem('user_id');
       localStorage.removeItem('student_id');

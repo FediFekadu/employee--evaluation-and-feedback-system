@@ -7,96 +7,60 @@ function HodEvaluations() {
   const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [savingId, setSavingId] = useState(null);
+  const [selectedEval, setSelectedEval] = useState(null);
+  const [templateQuestions, setTemplateQuestions] = useState([]);
+  const [templateLoading, setTemplateLoading] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await api.get(`/departments/${departmentId}/hod-evaluations?open_only=true`);
-        // Laravel paginator returns { data: [...] }
-        const items = Array.isArray(res.data?.data) ? res.data.data : (res.data || []);
-        if (mounted) setEvaluations(items);
-      } catch (e) {
-        if (mounted) setError('Failed to load HOD evaluations.');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    if (departmentId) load();
-    return () => { mounted = false; };
-  }, [departmentId]);
-
-  const handleSave = async (item, score, remarks) => {
-    setSavingId(item.id);
+  const loadEvaluations = async () => {
+    setLoading(true);
+    setError('');
     try {
-      await api.post(`/hod-evaluations/${item.id}/score`, { score: Number(score), remarks });
-      // Optimistically update local state
-      setEvaluations(prev => prev.map(ev => ev.id === item.id ? { ...ev, score: Number(score), remarks, status: 'submitted' } : ev));
+      const res = await api.get(`/departments/${departmentId}/hod-evaluations`);
+      const items = Array.isArray(res.data?.data) ? res.data.data : (res.data || []);
+      setEvaluations(items);
     } catch (e) {
-      setError('Failed to save HOD score.');
+      console.error('Failed to load HOD evaluations', e);
+      setError(`Failed to load HOD evaluations: ${e.response?.data?.message || e.message}`);
     } finally {
-      setSavingId(null);
+      setLoading(false);
     }
   };
 
-  const renderItem = (item) => {
-    const [scoreState, setScoreState] = useState(item.score ?? '');
-    const [remarksState, setRemarksState] = useState(item.remarks ?? '');
+  useEffect(() => {
+    if (departmentId) {
+      loadEvaluations();
+      loadTemplate();
+    }
+  }, [departmentId]);
 
-    return (
-      <div key={item.id} className="hod-eval-card">
-        <div className="hod-eval-header">
-          <div className="hod-eval-title">
-            <span className="teacher-name">{item.teacher?.name || 'Unknown Teacher'}</span>
-            <span className="eval-meta">AY {item.academic_year} • {item.semester}</span>
-          </div>
-          <div className="eval-status">{item.status || 'open'}</div>
-        </div>
-        <div className="hod-eval-body">
-          <div className="score-row">
-            <label htmlFor={`score-${item.id}`}>Score (0–100)</label>
-            <input
-              id={`score-${item.id}`}
-              type="number"
-              min="0"
-              max="100"
-              value={scoreState}
-              onChange={(e) => setScoreState(e.target.value)}
-              className="dept-input"
-            />
-          </div>
-          <div className="remarks-row">
-            <label htmlFor={`remarks-${item.id}`}>Remarks (optional)</label>
-            <textarea
-              id={`remarks-${item.id}`}
-              value={remarksState}
-              onChange={(e) => setRemarksState(e.target.value)}
-              className="dept-textarea"
-              rows={3}
-            />
-          </div>
-        </div>
-        <div className="hod-eval-actions">
-          <button
-            className="dept-btn dept-btn-primary"
-            disabled={savingId === item.id}
-            onClick={() => handleSave(item, scoreState, remarksState)}
-          >
-            {savingId === item.id ? 'Saving…' : 'Save HOD Score'}
-          </button>
-        </div>
-      </div>
-    );
+  const loadTemplate = async () => {
+    setTemplateLoading(true);
+    try {
+      const res = await api.get(`/departments/${departmentId}/hod-template`);
+      setTemplateQuestions(res.data.questions || []);
+    } catch (e) {
+      console.error('Failed to load evaluation template', e);
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  const handleOpenEvaluation = (evaluation) => {
+    setSelectedEval(evaluation);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedEval(null);
+    loadEvaluations(); // Refresh list to update status/score
   };
 
   return (
     <div className="department-page">
-      <div className="page-header">
-        <h2>HOD Evaluations</h2>
-        <p>Record HOD scores for assigned evaluations.</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+            <h2>HOD Evaluations</h2>
+            <p>Evaluate teachers based on department criteria.</p>
+        </div>
       </div>
 
       {loading && (
@@ -112,75 +76,311 @@ function HodEvaluations() {
           <p>Open or assign HOD evaluations to begin scoring.</p>
         </div>
       )}
+
       <div className="hod-evals-list">
         {evaluations.map(ev => (
-          <HodEvalItem key={ev.id} item={ev} onSave={handleSave} savingId={savingId} />
+          <div key={ev.id} className="hod-eval-card" style={{ background: 'var(--panel)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+            <div className="hod-eval-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="instructor-avatar" style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: 'var(--neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  {ev.teacher?.photo_url || ev.teacher?.profile_photo_url ? (
+                    <img src={ev.teacher.photo_url || ev.teacher.profile_photo_url} alt={ev.teacher?.name || 'Instructor'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span>{(ev.teacher?.name || 'T').slice(0, 1).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="hod-eval-title">
+                  <div className="teacher-name" style={{ fontSize: 18, fontWeight: 600 }}>{ev.teacher?.name || 'Unknown Teacher'}</div>
+                  <div className="eval-meta" style={{ color: 'var(--muted)' }}>AY {ev.academic_year} • {ev.semester}</div>
+                </div>
+              </div>
+              <div className="eval-status">
+                {ev.status === 'submitted' ? (
+                    <div style={{ textAlign: 'right' }}>
+                        <span className="status-badge completed">Submitted</span>
+                        <div style={{ fontSize: 12, marginTop: 4 }}>Score: <strong>{Number(ev.score).toFixed(1)}</strong></div>
+                    </div>
+                ) : (
+                  <span className="status-badge open">Open</span>
+                )}
+              </div>
+            </div>
+            
+            <div className="hod-eval-actions" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {ev.status === 'submitted' ? (
+                <button
+                  className="dept-btn dept-btn-secondary"
+                  disabled
+                  style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                >
+                  Submitted
+                </button>
+              ) : (
+                <button
+                  className="dept-btn dept-btn-primary"
+                  onClick={() => handleOpenEvaluation(ev)}
+                >
+                  Evaluate
+                </button>
+              )}
+            </div>
+          </div>
         ))}
       </div>
+
+      {selectedEval && (
+        <HodEvaluationModal
+          evaluation={selectedEval}
+          questions={templateQuestions}
+          onClose={handleCloseModal}
+          templateLoading={templateLoading}
+        />
+      )}
     </div>
   );
 }
 
-function HodEvalItem({ item, onSave, savingId }) {
-  const [scoreState, setScoreState] = useState(item.score ?? '');
-  const [remarksState, setRemarksState] = useState(item.remarks ?? '');
+function HodEvaluationModal({ evaluation, questions, onClose, templateLoading }) {
+  const [responses, setResponses] = useState({});
+  const [remarks, setRemarks] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Load existing responses if any
+    const loadDetails = async () => {
+      try {
+        const res = await api.get(`/hod-evaluations/${evaluation.id}`);
+        const existingEval = res.data;
+        
+        // Populate responses
+        const initialResponses = {};
+        if (existingEval.responses && Array.isArray(existingEval.responses)) {
+            existingEval.responses.forEach(r => {
+                initialResponses[r.hod_template_question_id] = {
+                    rating: r.rating,
+                    text: r.text
+                };
+            });
+
+            // RECOVERY LOGIC: If we have responses but they don't match current question IDs
+            // (likely due to template update wiping IDs), try to map by index.
+            const hasMatchingIds = questions.some(q => initialResponses[q.id]);
+            if (!hasMatchingIds && existingEval.responses.length > 0) {
+                 console.warn('HOD Evaluation: ID mismatch detected. Attempting recovery by index.');
+                 // Sort responses by ID (assuming creation order)
+                 const sortedResponses = [...existingEval.responses].sort((a, b) => a.id - b.id);
+                 // Sort questions by order
+                 const sortedQuestions = [...questions].sort((a, b) => (a.order || 0) - (b.order || 0));
+                 
+                 // Only attempt if counts match or are close enough to be useful (e.g., within reason)
+                 // For now, strict count match to avoid misalignment
+                 if (sortedResponses.length <= sortedQuestions.length) {
+                     sortedResponses.forEach((r, index) => {
+                         if (sortedQuestions[index]) {
+                            initialResponses[sortedQuestions[index].id] = {
+                                rating: r.rating,
+                                text: r.text
+                            };
+                         }
+                     });
+                 }
+            }
+        }
+        setResponses(initialResponses);
+        setRemarks(existingEval.remarks || '');
+      } catch (e) {
+        console.error('Failed to load evaluation details', e);
+        setError('Failed to load existing responses.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (evaluation.id) {
+        loadDetails();
+    }
+  }, [evaluation.id]);
+
+  const handleRatingChange = (questionId, value) => {
+    setResponses(prev => ({
+      ...prev,
+      [questionId]: { ...prev[questionId], rating: value === 'nc' ? null : Number(value) }
+    }));
+  };
+
+  const handleTextChange = (questionId, value) => {
+    setResponses(prev => ({
+        ...prev,
+        [questionId]: { ...prev[questionId], text: value }
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError('');
+    
+    // Validate: ensure all rating questions have a rating
+    const ratingQuestions = questions.filter(q => q.type === 'rating');
+    const missing = ratingQuestions.filter(q => {
+        const r = responses[q.id];
+        return !r || r.rating === undefined;
+    });
+    
+    if (missing.length > 0) {
+        setError(`Please answer all ${ratingQuestions.length} rating questions.`);
+        setSubmitting(false);
+        return;
+    }
+
+    try {
+      const payload = {
+        responses: Object.entries(responses).map(([qId, val]) => ({
+            question_id: Number(qId),
+            rating: val.rating,
+            text: val.text
+        })),
+        remarks,
+        status: 'submitted'
+      };
+
+      await api.post(`/hod-evaluations/${evaluation.id}/submit`, payload);
+      onClose(); // Close modal on success (which triggers refresh)
+    } catch (e) {
+      console.error('Submission failed', e);
+      setError('Failed to submit evaluation. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading || templateLoading) {
+      return (
+          <div className="modal-overlay">
+              <div className="modal-content" style={{ padding: 40, textAlign: 'center' }}>
+                  <div className="loading-spinner"></div>
+                  <p>Loading evaluation form...</p>
+              </div>
+          </div>
+      );
+  }
 
   return (
-    <div className="hod-eval-card" style={{ background: 'var(--panel)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-      <div className="hod-eval-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="instructor-avatar" style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: 'var(--neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-            {item.teacher?.photo_url || item.teacher?.profile_photo_url ? (
-              <img src={item.teacher.photo_url || item.teacher.profile_photo_url} alt={item.teacher?.name || 'Instructor'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span>{(item.teacher?.name || 'T').slice(0, 1).toUpperCase()}</span>
+    <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div className="modal-content" style={{ background: 'var(--bg-primary)', width: '90%', maxWidth: 800, maxHeight: '90vh', overflowY: 'auto', borderRadius: 12, padding: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'var(--bg-primary)', zIndex: 10 }}>
+          <h3 style={{ margin: 0 }}>Evaluate {evaluation.teacher?.name}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--muted)' }}>&times;</button>
+        </div>
+        
+        <div className="modal-body" style={{ padding: 24, flex: 1, overflowY: 'auto' }}>
+            {error && (
+                <div className="error-alert" style={{ background: '#fee2e2', color: '#dc2626', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                    {error}
+                </div>
             )}
-          </div>
-          <div className="hod-eval-title">
-            <div className="teacher-name" style={{ fontSize: 18, fontWeight: 600 }}>{item.teacher?.name || 'Unknown Teacher'}</div>
-            <div className="eval-meta" style={{ color: 'var(--muted)' }}>AY {item.academic_year} • {item.semester}</div>
-          </div>
+            
+            {questions.length === 0 ? (
+                <div className="empty-state">
+                    <p>No evaluation criteria found for this department.</p>
+                </div>
+            ) : (
+                <div className="evaluation-form">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
+                        <thead>
+                            <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-soft)' }}>
+                                <th style={{ padding: '12px 16px', textAlign: 'left', width: '40%' }}>Evaluation Criteria</th>
+                                {[1, 2, 3, 4, 5].map(score => (
+                                    <th key={score} style={{ padding: '12px 8px', textAlign: 'center', minWidth: 60 }}>
+                                        <div style={{ fontSize: 16, fontWeight: 600 }}>{score}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>
+                                            {score === 1 ? 'Poor' : score === 2 ? 'Fair' : score === 3 ? 'Good' : score === 4 ? 'Very Good' : 'Excellent'}
+                                        </div>
+                                    </th>
+                                ))}
+                                <th style={{ padding: '12px 8px', textAlign: 'center', minWidth: 60 }}>
+                                    <div style={{ fontSize: 16, fontWeight: 600 }}>NC</div>
+                                    <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>Does not Apply</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {questions.map((q, index) => (
+                                <React.Fragment key={q.id}>
+                                    {q.type === 'rating' ? (
+                                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                            <td style={{ padding: '16px', verticalAlign: 'middle' }}>
+                                                <div style={{ fontWeight: 500, marginBottom: 4 }}>{index + 1}. {q.text}</div>
+                                            </td>
+                                            {[1, 2, 3, 4, 5].map(score => (
+                                                <td key={score} style={{ padding: '16px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                                    <label style={{ cursor: 'pointer', display: 'block', height: '100%' }}>
+                                                        <input
+                                                            type="radio"
+                                                            name={`q-${q.id}`}
+                                                            value={score}
+                                                            checked={responses[q.id]?.rating === score}
+                                                            onChange={() => handleRatingChange(q.id, score)}
+                                                            style={{ width: 18, height: 18, accentColor: 'var(--primary)' }}
+                                                        />
+                                                    </label>
+                                                </td>
+                                            ))}
+                                            <td style={{ padding: '16px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                                <label style={{ cursor: 'pointer', display: 'block', height: '100%' }}>
+                                                    <input
+                                                        type="radio"
+                                                        name={`q-${q.id}`}
+                                                        value="nc"
+                                                        checked={responses[q.id]?.rating === null}
+                                                        onChange={() => handleRatingChange(q.id, 'nc')}
+                                                        style={{ width: 18, height: 18, accentColor: 'var(--primary)' }}
+                                                    />
+                                                </label>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        <tr key={q.id}>
+                                            <td colSpan={7} style={{ padding: '16px', borderBottom: '1px solid var(--border-light)' }}>
+                                                <div style={{ fontWeight: 500, marginBottom: 8 }}>{index + 1}. {q.text}</div>
+                                                <textarea
+                                                    className="dept-textarea"
+                                                    value={responses[q.id]?.text || ''}
+                                                    onChange={(e) => handleTextChange(q.id, e.target.value)}
+                                                    placeholder="Enter your comments here..."
+                                                    rows={3}
+                                                    style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid var(--border-input)' }}
+                                                />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div className="general-remarks" style={{ marginTop: 24 }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>General Remarks</label>
+                        <textarea
+                            className="dept-textarea"
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            placeholder="Overall comments regarding this evaluation..."
+                            rows={4}
+                            style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid var(--border-input)' }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
-        <div className="eval-status">
-          {item.status === 'submitted' ? (
-            <span className="status-badge completed">Evaluation submitted</span>
-          ) : (
-            <span className="status-badge open">Open</span>
-          )}
+
+        <div className="modal-footer" style={{ padding: '20px 24px', borderTop: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'flex-end', gap: 12, position: 'sticky', bottom: 0, background: 'var(--bg-primary)', zIndex: 10 }}>
+          <button className="dept-btn dept-btn-secondary" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button className="dept-btn dept-btn-primary" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Submitting...' : 'Submit Evaluation'}
+          </button>
         </div>
-      </div>
-      <div className="hod-eval-body">
-        <div className="score-row">
-          <label htmlFor={`score-${item.id}`}>Score (0–100)</label>
-          <input
-            id={`score-${item.id}`}
-            type="number"
-            min="0"
-            max="100"
-            value={scoreState}
-            onChange={(e) => setScoreState(e.target.value)}
-            className="dept-input"
-          />
-        </div>
-        <div className="remarks-row">
-          <label htmlFor={`remarks-${item.id}`}>Remarks (optional)</label>
-          <textarea
-            id={`remarks-${item.id}`}
-            value={remarksState}
-            onChange={(e) => setRemarksState(e.target.value)}
-            className="dept-textarea"
-            rows={3}
-          />
-        </div>
-      </div>
-      <div className="hod-eval-actions">
-        <button
-          className="dept-btn dept-btn-primary"
-          disabled={savingId === item.id}
-          onClick={() => onSave(item, scoreState, remarksState)}
-        >
-          {savingId === item.id ? 'Saving…' : 'Save HOD Score'}
-        </button>
       </div>
     </div>
   );

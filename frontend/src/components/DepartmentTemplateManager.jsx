@@ -23,8 +23,8 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
   // Default comprehensive sections
   const defaultSections = useMemo(() => ([
     {
-      key: 'A',
-      title: 'A. INSTRUCTIONAL SKILLS: የማስተማር/የአስተማሪ ችሎታዎች',
+      key: 'General',
+      title: 'Evaluation Criteria',
       items: [
         'Applies & respects day one class one. የመጀመሪያ ቀን ክፍል አንድ ይተገብራል እና ያከብራል።',
         'Prepares & gives clear course outline. ዝርዝር ኮርስ ዝርዝር ይዘጋጃል እና ይሰጣል።',
@@ -39,13 +39,7 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
         'Teaches using appropriate instructional materials (teaching aids). ተገቢ የማስተማሪያ ቁሳቁሶችን (የማስተማሪያ መሳሪያዎች) በመጠቀም ያስተምራል።',
         'Provides handout as well as necessary lists of reference books. የእጅ ወረቀት እንዲሁም አስፈላጊ የማጣቀሻ መጽሐፍት ዝርዝር ይሰጣል።',
         'Has interest & motivation to teach. ለማስተማር ፍላጎት እና ተነሳሽነት አለው።',
-        'Uses the class only for appropriate teaching & learning issues. ክፍሉን ለተገቢ የማስተማር እና የመማር ጉዳዮች ብቻ ይጠቀማል።'
-      ],
-    },
-    {
-      key: 'B',
-      title: 'B. PROFESSIONAL ETHICS & ATTITUDE TOWARDS THE STUDENTS: የሙያዊ ስነ-ምግባር እና ከተማሪዎች ጋር ያለው አመለካከት',
-      items: [
+        'Uses the class only for appropriate teaching & learning issues. ክፍሉን ለተገቢ የማስተማር እና የመማር ጉዳዮች ብቻ ይጠቀማል።',
         'Always comes to the class on time & compensates wasted class time regularly. ሁልጊዜ በሰዓቱ ወደ ክፍል ይመጣል እና የጠፋውን የክፍል ጊዜ በመደበኛነት ይካካል።',
         'Encourages the students to participate in the class and receives answers from & gives answers to students\' questions satisfactorily. ተማሪዎች በክፍል ውስጥ እንዲሳተፉ ያበረታታል እና ከተማሪዎች ጥያቄዎች መልስ ይቀበላል እና በአጥጋቢ ሁኔታ መልስ ይሰጣል።',
         'Always avails himself or herself & solves the academic problem of the students during consultation hours. በማማከር ሰዓታት ሁልጊዜ ራሱን ያቀርባል እና የተማሪዎችን አካዳሚያዊ ችግር ይፈታል።',
@@ -53,13 +47,7 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
         'Usually motivates and encourages students to learn. ብዙውን ጊዜ ተማሪዎችን እንዲማሩ ያነሳሳል እና ያበረታታል።',
         'Tries to foster climate of trust and respect in teaching and learning process. በማስተማር እና በመማር ሂደት ውስጥ የመተማመን እና የመከባበር ሁኔታ ለመፍጠር ይሞክራል።',
         'Encourages student to express their feelings. ተማሪዎች ስሜታቸውን እንዲገልጹ ያበረታታል።',
-        'Good role model, honest & a person of integrity. ጥሩ አርአያ፣ ታማኝ እና ታማኝነት ያለው ሰው።'
-      ],
-    },
-    {
-      key: 'C',
-      title: 'C. ASSESSMENT METHODS & FEEDBACK: የግምገማ ዘዴዎች እና ግብረመልስ',
-      items: [
+        'Good role model, honest & a person of integrity. ጥሩ አርአያ፣ ታማኝ እና ታማኝነት ያለው ሰው።',
         'Announces the methods & types of assessment used in the course in advance. በኮርሱ ውስጥ የሚጠቀሙትን የግምገማ ዘዴዎች እና ዓይነቶች ቀድሞ ያስታውቃል።',
         'Checks if students have understood the lesson by different mechanisms. ተማሪዎች ትምህርቱን መረዳታቸውን በተለያዩ ዘዴዎች ይፈትሻል።',
         'Using continuous assessment, assesses students with various methods. ቀጣይነት ያለው ግምገማ በመጠቀም ተማሪዎችን በተለያዩ ዘዴዎች ይገመግማል።',
@@ -74,20 +62,12 @@ function DepartmentTemplateManager({ departmentId, template, questions, onTempla
   // Initialize sections from existing questions or use defaults
   const [sections, setSections] = useState(() => {
     if (questions && questions.length > 0) {
-      // Group existing questions by section
-      const grouped = questions.reduce((acc, q) => {
-        const section = q.section || 'A';
-        if (!acc[section]) {
-          acc[section] = [];
-        }
-        acc[section].push(q.text);
-        return acc;
-      }, {});
-
-      return defaultSections.map(section => ({
-        ...section,
-        items: grouped[section.key] || section.items
-      }));
+      // Flatten all existing questions into the single General section
+      return [{
+        key: 'General',
+        title: 'Evaluation Criteria',
+        items: questions.map(q => q.text)
+      }];
     }
     return defaultSections;
   });

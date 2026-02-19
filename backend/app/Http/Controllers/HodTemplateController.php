@@ -10,13 +10,38 @@ class HodTemplateController extends Controller
 {
     public function getTemplate($departmentId)
     {
+        // Try to get specific template for this department
         $template = DepartmentHodEvaluationTemplate::getActiveTemplate($departmentId);
+        
+        // Fallback: If no specific template found, try to find ANY active template (useful for demo/dev)
         if (!$template) {
+            $template = DepartmentHodEvaluationTemplate::where('is_active', true)
+                ->with('questions')
+                ->first();
+        }
+
+        if (!$template) {
+            // Last resort: If no template found, fetch questions directly from hod_template_questions
+            // This ensures we always return something if the table has data, as requested
+            $questions = HodTemplateQuestion::orderBy('order')->take(20)->get();
+            
+            if ($questions->isNotEmpty()) {
+                return response()->json([
+                    'template' => [
+                        'id' => null,
+                        'name' => 'Default Template (Fallback)',
+                        'description' => 'Generated from available questions'
+                    ],
+                    'questions' => $questions,
+                ]);
+            }
+
             return response()->json([
                 'template' => null,
                 'questions' => [],
             ]);
         }
+        
         return response()->json([
             'template' => $template,
             'questions' => $template->questions()->orderBy('order')->get(),
@@ -31,6 +56,7 @@ class HodTemplateController extends Controller
             'template.description' => 'nullable|string',
             'template.form_info' => 'nullable|array',
             'questions' => 'required|array',
+            'questions.*.id' => 'nullable|integer',
             'questions.*.text' => 'required|string',
             'questions.*.type' => 'required|in:rating,text',
             'questions.*.section' => 'nullable|string',
@@ -52,17 +78,49 @@ class HodTemplateController extends Controller
         $template->form_info = $data['template']['form_info'] ?? null;
         $template->save();
 
-        // Replace questions
-        HodTemplateQuestion::where('template_id', $template->id)->delete();
+        // Smart sync questions to preserve IDs where possible
+        $existingQuestions = $template->questions;
+        $keptIds = [];
+
         foreach ($data['questions'] as $index => $q) {
-            HodTemplateQuestion::create([
-                'template_id' => $template->id,
-                'text' => $q['text'],
-                'type' => $q['type'],
-                'section' => $q['section'] ?? null,
-                'order' => $q['order'] ?? ($index + 1),
-            ]);
+            $match = null;
+            
+            // Try to find by ID if provided
+            if (isset($q['id'])) {
+                $match = $existingQuestions->firstWhere('id', $q['id']);
+            }
+            
+            // If no ID or not found, try to find by text and type (heuristic to preserve IDs)
+            if (!$match) {
+                $match = $existingQuestions->first(function ($item) use ($q) {
+                    return $item->text === $q['text'] && $item->type === $q['type'];
+                });
+            }
+
+            if ($match) {
+                $match->update([
+                    'text' => $q['text'],
+                    'type' => $q['type'],
+                    'section' => null, // Sections removed as requested
+                    'order' => $q['order'] ?? ($index + 1),
+                ]);
+                $keptIds[] = $match->id;
+            } else {
+                $newQ = HodTemplateQuestion::create([
+                    'template_id' => $template->id,
+                    'text' => $q['text'],
+                    'type' => $q['type'],
+                    'section' => null, // Sections removed as requested
+                    'order' => $q['order'] ?? ($index + 1),
+                ]);
+                $keptIds[] = $newQ->id;
+            }
         }
+
+        // Delete questions that were removed from the template
+        // Note: This will still break old evaluations if questions are genuinely removed.
+        // But it prevents breakage when just saving/reordering without changes.
+        $template->questions()->whereNotIn('id', $keptIds)->delete();
 
         return response()->json([
             'message' => 'HOD template updated successfully',

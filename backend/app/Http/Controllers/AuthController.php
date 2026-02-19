@@ -28,9 +28,12 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'user' => $user,
             'student' => $student,
+            'token' => $token,
         ]);
     }
 
@@ -61,8 +64,9 @@ class AuthController extends Controller
         );
 
         Auth::login($user);
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json(['user' => $user]);
+        return response()->json(['user' => $user, 'token' => $token]);
     }
 
     public function login(Request $request)
@@ -85,18 +89,27 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
-        return response()->json(['user' => $user]);
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json(['user' => $user, 'token' => $token]);
     }
 
     public function logout(Request $request)
     {
         try {
-            Auth::logout();
-            
-            // Only invalidate session if it exists (for web routes)
-            if ($request->hasSession()) {
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+            // Revoke the specific token used for the request
+            if ($request->user()) {
+                $request->user()->currentAccessToken()->delete();
+            }
+
+            // Also handle web session logout if applicable (for hybrid apps)
+            // This prevents session fixation if the user also has a cookie session
+            if (Auth::guard('web')->check()) {
+                Auth::guard('web')->logout();
+                if ($request->hasSession()) {
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                }
             }
             
             return response()->json(['message' => 'Logged out']);

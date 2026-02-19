@@ -3,8 +3,25 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   withCredentials: false,
-  headers: { 'Accept': 'application/json' },
+  headers: { 
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  },
 });
+
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 function isSafeMode() {
   try {
@@ -90,6 +107,23 @@ api.interceptors.response.use(
         return mockAnalytics(url, cfg);
       }
     }
+    
+    // Handle 401 Unauthorized globally
+    if (error.response && error.response.status === 401) {
+      // Clear all auth data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_role');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('department_id');
+        
+        // Redirect to login if not already there
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
