@@ -119,7 +119,7 @@ function DepartmentCoursesAndInstructors() {
       });
       setDepartment((prev) => prev ? { ...prev, courses: [res.data, ...(prev.courses || [])] } : prev);
       setCourseForm({ title: '', code: '', description: '', year_level: '', semester: '', teacher_ids: [] });
-      alert('Course created and instructors assigned');
+      alert('Course created successfully');
     } catch (e) {
       alert('Failed to create course');
     } finally {
@@ -874,27 +874,6 @@ function DepartmentCoursesAndInstructors() {
                   onChange={(e) => setCourseForm((f) => ({ ...f, description: e.target.value }))}
                   rows="4"
                 />
-              </div>
-              
-              <div className="form-group full-width">
-                <label className="form-label">Assign Instructors</label>
-                <select 
-                  className="form-select" 
-                  multiple 
-                  size={Math.min(6, Math.max(3, teacherOptions.length))} 
-                  value={courseForm.teacher_ids} 
-                  onChange={(e) => {
-                    const opts = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    setCourseForm((f) => ({ ...f, teacher_ids: opts }));
-                  }}
-                >
-                  {teacherOptions.map((t) => (
-                    <option key={t.id} value={String(t.id)}>
-                      {t.name} ({t.email})
-                    </option>
-                  ))}
-                </select>
-                <small className="form-hint">Hold Ctrl/Cmd to select multiple instructors</small>
               </div>
             </div>
             
