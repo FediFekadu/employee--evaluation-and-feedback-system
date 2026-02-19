@@ -142,7 +142,7 @@ function App() {
               element={
                 <div className="homepage">
                   <section className="hero">
-                    <h1>Student Feedback & Teacher Evaluation System</h1>
+                    <h1>Evaluation & Feedback System</h1>
                     <p>
                       A secure, role‑based platform for collecting student feedback, managing
                       department courses and evaluations, and providing insightful reports for teachers
