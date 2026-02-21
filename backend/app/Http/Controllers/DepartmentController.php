@@ -546,6 +546,14 @@ class DepartmentController extends Controller
     public function reports(Request $request, Department $department)
     {
         try {
+            // Log request details for debugging
+            \Log::info("Reports requested for department: {$department->id}", [
+                'user_id' => auth()->id(),
+                'user_dept' => auth()->user()?->department_id,
+                'params' => $request->all(),
+                'period' => $request->query('period'),
+            ]);
+
             $data = $request->validate([
                 'optimize' => 'nullable|boolean',
                 'summary_only' => 'nullable|boolean',
@@ -561,6 +569,18 @@ class DepartmentController extends Controller
             // Get evaluations for this department
             $evaluationsQuery = $department->evaluations()
                 ->with(['course', 'teacher', 'feedbacks']);
+
+            // Apply period filtering
+            $date = now();
+            if ($period === 'week') {
+                $evaluationsQuery->where('created_at', '>=', $date->copy()->startOfWeek());
+            } elseif ($period === 'month') {
+                $evaluationsQuery->where('created_at', '>=', $date->copy()->startOfMonth());
+            } elseif ($period === 'quarter') {
+                $evaluationsQuery->where('created_at', '>=', $date->copy()->startOfQuarter());
+            } elseif ($period === 'year') {
+                $evaluationsQuery->where('created_at', '>=', $date->copy()->startOfYear());
+            }
 
             if ($optimize) {
                 // Only get recent evaluations for optimization
@@ -583,6 +603,7 @@ class DepartmentController extends Controller
                     'peer'    => ['raw' => 0, 'weighted' => 0, 'count' => 0, 'weight' => 30],
                     'admin'   => ['raw' => 0, 'weighted' => 0, 'count' => 0, 'weight' => 20],
                 ];
+                $sectionBreakdownAccumulator = [];
                 $ratingDistribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
 
                 $evaluationSummaries = [];
@@ -620,12 +641,28 @@ class DepartmentController extends Controller
                         }
                     }
 
+                    // Accumulate section breakdown
+                    if (!empty($stats['section_breakdown'])) {
+                        foreach ($stats['section_breakdown'] as $sectionKey => $data) {
+                            if (!isset($sectionBreakdownAccumulator[$sectionKey])) {
+                                $sectionBreakdownAccumulator[$sectionKey] = [
+                                    'name' => $data['name'],
+                                    'total_score' => 0,
+                                    'count' => 0
+                                ];
+                            }
+                            $sectionBreakdownAccumulator[$sectionKey]['total_score'] += $data['average'];
+                            $sectionBreakdownAccumulator[$sectionKey]['count']++;
+                        }
+                    }
+
                     // Collect recent evaluation summaries for the table
                     if (!$summaryOnly) {
                         $evaluationSummaries[] = [
                             'id' => $eval->id,
                             'course_code' => $eval->course->code ?? null,
                             'course' => $eval->course->title ?? 'Unknown Course',
+                            'teacher_id' => $eval->teacher_id,
                             'instructor' => $eval->teacher->name ?? 'Unknown Instructor',
                             'status' => $eval->status,
                             'responses' => $stats['total_responses'] ?? $eval->feedbacks->count(),
@@ -676,6 +713,16 @@ class DepartmentController extends Controller
                     ];
                 }
 
+                // Build aggregated section breakdown
+                $aggregatedSectionBreakdown = [];
+                foreach ($sectionBreakdownAccumulator as $key => $data) {
+                    $aggregatedSectionBreakdown[] = [
+                        'subject' => $data['name'],
+                        'A' => $data['count'] > 0 ? round($data['total_score'] / $data['count'], 2) : 0,
+                        'fullMark' => 5
+                    ];
+                }
+
                 // Compose final schema (aligned with per-teacher-per-semester model)
                 $data = [
                     'summary' => [
@@ -697,6 +744,7 @@ class DepartmentController extends Controller
                         'final_weighted_score' => $avgWeightedScore,
                         'breakdown' => $aggregatedBreakdown,
                     ],
+                    'section_breakdown' => $aggregatedSectionBreakdown,
                     'rating_distribution' => $ratingDistribution,
                     'teacher_semester_results' => $teacherSemesterResults,
                 ];

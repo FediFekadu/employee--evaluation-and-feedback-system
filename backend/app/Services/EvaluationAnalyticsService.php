@@ -120,8 +120,10 @@ class EvaluationAnalyticsService
 
             // Calculate course-level student scores and average them for the semester student score
             $courseStudentScores = [];
+            $totalResponses = 0;
             foreach ($evaluations as $eval) {
                 $courseStudentScores[] = $this->calculateStudentEvaluationScore($eval->id);
+                $totalResponses += EvaluationSubmission::where('evaluation_id', $eval->id)->count();
             }
             $studentSemesterScore = round(array_sum($courseStudentScores) / max(1, count($courseStudentScores)), 2);
 
@@ -138,6 +140,7 @@ class EvaluationAnalyticsService
                 'teacher_id' => $teacherId,
                 'academic_year' => $academicYear,
                 'semester' => $semester,
+                'total_responses' => $totalResponses,
                 'student_score' => round($studentSemesterScore, 2),
                 'peer_score' => round($peerSemesterScore, 2),
                 'admin_score' => round($adminSemesterScore, 2),
@@ -512,12 +515,12 @@ class EvaluationAnalyticsService
             $participationData = $this->calculateParticipationRate($evaluationId);
             
             // Optimize query by using eager loading and specific columns
-            $allResponses = Response::select(['id', 'feedback_id', 'rating', 'text'])
+            $allResponses = Response::select(['id', 'feedback_id', 'question_id', 'rating', 'text'])
                 ->whereHas('feedback', function ($query) use ($evaluationId) {
                     $query->where('evaluation_id', $evaluationId)
                           ->where('is_locked', true); // Only include completed feedbacks
                 })
-                ->with(['feedback:id,is_locked'])
+                ->with(['feedback:id,is_locked', 'question:id,section'])
                 ->get();
 
             // Filter out invalid responses
@@ -526,6 +529,19 @@ class EvaluationAnalyticsService
             $ratingDistribution = $responses->whereNotNull('rating')->groupBy('rating')->map(function ($group) {
                 return $group->count();
             })->toArray();
+
+            // Calculate section breakdown
+            $sectionBreakdown = $responses->whereNotNull('rating')
+                ->groupBy(function ($response) {
+                    return $response->question ? $response->question->section : 'Other';
+                })
+                ->map(function ($group, $section) {
+                    return [
+                        'name' => $this->getSectionName($section),
+                        'average' => round($group->avg('rating'), 2),
+                        'count' => $group->count()
+                    ];
+                })->toArray();
 
             // Calculate average rating (only from valid responses)
             $averageRating = $responses->whereNotNull('rating')->avg('rating') ?? 0;
@@ -568,6 +584,7 @@ class EvaluationAnalyticsService
                 'weighted_scores' => $weightedScores,
                 'participation' => $participationData,
                 'rating_distribution' => $ratingDistribution,
+                'section_breakdown' => $sectionBreakdown,
                 'total_responses' => $totalAllResponses, // Updated to include all response types
                 'student_responses' => $studentResponseCount, // Keep student-only count for reference
                 'peer_responses' => $peerResponseCount,
