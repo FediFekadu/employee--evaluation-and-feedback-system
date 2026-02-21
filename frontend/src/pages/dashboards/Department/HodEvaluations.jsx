@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../../services/api';
+import StyledCard from '../../../components/Common/StyledCard';
 
 function HodEvaluations() {
   const { id: departmentId } = useParams();
@@ -77,55 +78,61 @@ function HodEvaluations() {
         </div>
       )}
 
-      <div className="hod-evals-list">
-        {evaluations.map(ev => (
-          <div key={ev.id} className="hod-eval-card" style={{ background: 'var(--panel)', border: '1px solid var(--border-soft)', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
-            <div className="hod-eval-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="instructor-avatar" style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: 'var(--neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                  {ev.teacher?.photo_url || ev.teacher?.profile_photo_url ? (
-                    <img src={ev.teacher.photo_url || ev.teacher.profile_photo_url} alt={ev.teacher?.name || 'Instructor'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <span>{(ev.teacher?.name || 'T').slice(0, 1).toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="hod-eval-title">
-                  <div className="teacher-name" style={{ fontSize: 18, fontWeight: 600 }}>{ev.teacher?.name || 'Unknown Teacher'}</div>
-                  <div className="eval-meta" style={{ color: 'var(--muted)' }}>AY {ev.academic_year} • {ev.semester}</div>
-                </div>
-              </div>
-              <div className="eval-status">
-                {ev.status === 'submitted' ? (
-                    <div style={{ textAlign: 'right' }}>
-                        <span className="status-badge completed">Submitted</span>
-                        <div style={{ fontSize: 12, marginTop: 4 }}>Score: <strong>{Number(ev.score).toFixed(1)}</strong></div>
-                    </div>
+      <div className="hod-evals-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+        {evaluations.map(ev => {
+          const isSubmitted = ev.status === 'submitted';
+          const statusColor = isSubmitted ? '#10b981' : '#f59e0b'; // Green or Amber
+          const statusBg = isSubmitted ? '#d1fae5' : '#fef3c7';
+          
+          return (
+            <StyledCard
+              key={ev.id}
+              icon={
+                ev.teacher?.photo_url || ev.teacher?.profile_photo_url ? (
+                  <img 
+                    src={ev.teacher.photo_url || ev.teacher.profile_photo_url} 
+                    alt={ev.teacher?.name} 
+                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                  />
                 ) : (
-                  <span className="status-badge open">Open</span>
-                )}
-              </div>
-            </div>
-            
-            <div className="hod-eval-actions" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              {ev.status === 'submitted' ? (
-                <button
-                  className="dept-btn dept-btn-secondary"
-                  disabled
-                  style={{ opacity: 0.7, cursor: 'not-allowed' }}
-                >
-                  Submitted
-                </button>
-              ) : (
-                <button
-                  className="dept-btn dept-btn-primary"
-                  onClick={() => handleOpenEvaluation(ev)}
-                >
-                  Evaluate
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+                  (ev.teacher?.name || 'T').charAt(0).toUpperCase()
+                )
+              }
+              iconBgColor={isSubmitted ? '#ecfdf5' : '#fffbeb'}
+              iconColor={statusColor}
+              title={ev.teacher?.name || 'Unknown Teacher'}
+              subtitle={`AY ${ev.academic_year} • ${ev.semester}`}
+              timestamp={ev.updated_at ? new Date(ev.updated_at).toLocaleDateString() : 'New'}
+              description={isSubmitted ? `Evaluation completed. Score: ${Number(ev.score).toFixed(1)}` : 'Pending evaluation. Click to start.'}
+              onClick={() => !isSubmitted && handleOpenEvaluation(ev)}
+              status={
+                <span style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '12px', 
+                  fontWeight: 600,
+                  backgroundColor: statusBg,
+                  color: statusColor
+                }}>
+                  {isSubmitted ? 'Submitted' : 'Pending'}
+                </span>
+              }
+              footer={
+                 <button 
+                   className={`dept-btn ${isSubmitted ? 'dept-btn-secondary' : 'dept-btn-primary'}`}
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     if (!isSubmitted) handleOpenEvaluation(ev);
+                   }}
+                   disabled={isSubmitted}
+                   style={{ padding: '6px 16px', fontSize: '13px', opacity: isSubmitted ? 0.7 : 1 }}
+                 >
+                   {isSubmitted ? 'Completed' : 'Evaluate'}
+                 </button>
+              }
+            />
+          );
+        })}
       </div>
 
       {selectedEval && (

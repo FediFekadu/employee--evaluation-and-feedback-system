@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../../services/api';
 import LoadingSpinner from '../../../components/ErrorHandling/LoadingSpinner';
+import StyledCard from '../../../components/Common/StyledCard';
 
 function CollegeAdminEvaluations() {
   const [evaluations, setEvaluations] = useState([]);
@@ -184,7 +185,7 @@ function CollegeAdminEvaluations() {
       )}
 
       {/* Evaluations List */}
-      <div className="card" style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 24 }}>
         <h4>Active Evaluations</h4>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 20 }}>
@@ -195,91 +196,85 @@ function CollegeAdminEvaluations() {
             No evaluations found. Create your first evaluation to get started.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: 12 }}>Course</th>
-                  <th style={{ textAlign: 'left', padding: 12 }}>Teacher</th>
-                  <th style={{ textAlign: 'left', padding: 12 }}>Period</th>
-                  <th style={{ textAlign: 'left', padding: 12 }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 12 }}>Duration</th>
-                  <th style={{ textAlign: 'left', padding: 12 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {evaluations.map((evaluation) => (
-                  <tr key={evaluation.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: 12 }}>
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{evaluation.course?.title || 'Unknown Course'}</div>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
-                          {evaluation.course?.code || 'N/A'}
-                        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+            {evaluations.map((evaluation) => {
+              const statusColor = getStatusColor(evaluation.status);
+              const statusBg = statusColor + '20'; // 20% opacity
+              
+              return (
+                <StyledCard
+                  key={evaluation.id}
+                  icon={
+                    evaluation.teacher?.photo_url ? (
+                      <img 
+                        src={evaluation.teacher.photo_url} 
+                        alt={evaluation.teacher?.name} 
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      (evaluation.teacher?.name || 'U').charAt(0).toUpperCase()
+                    )
+                  }
+                  iconBgColor={statusBg}
+                  iconColor={statusColor}
+                  title={evaluation.course?.title || 'Unknown Course'}
+                  subtitle={evaluation.course?.code || 'N/A'}
+                  timestamp={`AY ${evaluation.academic_year}`}
+                  description={
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontWeight: 600 }}>{evaluation.teacher?.name || 'Unassigned'}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                        Sem {evaluation.semester}, Year {evaluation.year_level}
                       </div>
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      {evaluation.teacher?.name || 'Unassigned'}
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      <div>
-                        <div>{evaluation.academic_year}</div>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
-                          Semester {evaluation.semester}, Year {evaluation.year_level}
-                        </div>
+                      <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>
+                        Opens: {formatDate(evaluation.opened_at)}
                       </div>
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: 4,
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        backgroundColor: getStatusColor(evaluation.status) + '20',
-                        color: getStatusColor(evaluation.status),
-                        textTransform: 'capitalize'
-                      }}>
-                        {evaluation.status || 'draft'}
-                      </span>
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      <div style={{ fontSize: '0.875rem' }}>
-                        <div>Opens: {formatDate(evaluation.opened_at)}</div>
-                        <div>Closes: {formatDate(evaluation.closed_at)}</div>
-                      </div>
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {evaluation.status === 'draft' && (
-                          <button
-                            className="btn btn-primary"
-                            style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                            onClick={() => handleStatusChange(evaluation.id, 'open')}
-                          >
-                            Open
-                          </button>
-                        )}
-                        {evaluation.status === 'open' && (
-                          <button
-                            className="btn btn-ghost"
-                            style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                            onClick={() => handleStatusChange(evaluation.id, 'closed')}
-                          >
-                            Close
-                          </button>
-                        )}
+                    </div>
+                  }
+                  status={
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      backgroundColor: statusBg,
+                      color: statusColor,
+                      textTransform: 'capitalize'
+                    }}>
+                      {evaluation.status || 'draft'}
+                    </span>
+                  }
+                  footer={
+                    <div style={{ display: 'flex', gap: 8, marginTop: '12px' }}>
+                      {evaluation.status === 'draft' && (
+                        <button
+                          className="btn btn-primary"
+                          style={{ flex: 1, padding: '6px' }}
+                          onClick={() => handleStatusChange(evaluation.id, 'open')}
+                        >
+                          Open
+                        </button>
+                      )}
+                      {evaluation.status === 'open' && (
                         <button
                           className="btn btn-ghost"
-                          style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                          style={{ flex: 1, padding: '6px', border: '1px solid var(--border)' }}
+                          onClick={() => handleStatusChange(evaluation.id, 'closed')}
                         >
-                          View Results
+                          Close
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      )}
+                      <button
+                        className="btn btn-ghost"
+                        style={{ flex: 1, padding: '6px', border: '1px solid var(--border)' }}
+                      >
+                        Results
+                      </button>
+                    </div>
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
+import StyledCard from '../../../components/Common/StyledCard';
 
 function PeerEvaluationsList() {
   const location = useLocation();
@@ -86,60 +87,94 @@ function PeerEvaluationsList() {
             </p>
           </div>
         ) : (
-          <div className="modern-peer-cards-grid">
-            {evaluations.map((ev, index) => (
-              <div className={`modern-peer-card card-${(index % 4) + 1}`} key={ev.id}>
-                <div className="card-gradient-top">
-                  <div className="card-number">{index + 1}</div>
-                </div>
-                
-                <div className="card-content">
-                  <div className="teacher-avatar-circle" title={ev?.teacher?.name || 'Teacher'}>
-                    {ev?.teacher?.photo_url || ev?.teacher?.profile_photo_url ? (
-                      <img
-                        src={ev?.teacher?.photo_url || ev?.teacher?.profile_photo_url}
-                        alt={ev?.teacher?.name || 'Teacher'}
+          <div className="modern-peer-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+            {evaluations.map((ev, index) => {
+              const isSubmitted = ev.submitted;
+              const statusColor = isSubmitted ? '#10b981' : '#3b82f6';
+              const statusBg = isSubmitted ? '#d1fae5' : '#dbeafe';
+
+              return (
+                <StyledCard
+                  key={ev.id}
+                  icon={
+                    ev.teacher?.photo_url || ev.teacher?.profile_photo_url ? (
+                      <img 
+                        src={ev.teacher.photo_url || ev.teacher.profile_photo_url} 
+                        alt={ev.teacher?.name} 
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
                       />
                     ) : (
-                      (ev?.teacher?.name
-                        ? ev.teacher.name
-                            .split(' ')
-                            .map(n => n[0])
-                            .join('')
-                            .toUpperCase()
-                        : 'UN')
-                    )}
-                  </div>
-                  
-                  <h3 className="teacher-title">{ev?.teacher?.name || 'Assigned Teacher'}</h3>
-                  <p className="department-subtitle">{ev?.department?.name || 'Software Engineering'}</p>
-                  
-                  <div className="card-meta">
-                    <div className="meta-item">
-                      <span>
-                        Opened on {ev?.opened_at ? new Date(ev.opened_at).toLocaleDateString() : '—'} • Status: {ev.submitted ? 'Submitted' : 'Open'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="card-action">
-                    {ev.submitted ? (
-                      <div className="status-pill submitted">
-                        ✓ Submitted
-                      </div>
+                      (ev.teacher?.name || 'T').charAt(0).toUpperCase()
+                    )
+                  }
+                  iconBgColor={statusBg}
+                  iconColor={statusColor}
+                  title={ev.teacher?.name || 'Assigned Teacher'}
+                  subtitle={ev.department?.name || 'Department'}
+                  timestamp={`AY ${ev.academic_year}`}
+                  description={
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                       <span style={{ fontWeight: 600 }}>{ev.semester}</span>
+                       <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                         Opened: {ev.opened_at ? new Date(ev.opened_at).toLocaleDateString() : '—'}
+                       </span>
+                     </div>
+                  }
+                  status={
+                    <span style={{ 
+                      padding: '4px 12px', 
+                      borderRadius: '20px', 
+                      fontSize: '12px', 
+                      fontWeight: 600,
+                      backgroundColor: statusBg,
+                      color: statusColor
+                    }}>
+                      {isSubmitted ? 'Submitted' : 'Open'}
+                    </span>
+                  }
+                  footer={
+                    isSubmitted ? (
+                      <button 
+                        disabled 
+                        style={{ 
+                          width: '100%', 
+                          marginTop: '16px',
+                          padding: '8px', 
+                          borderRadius: '8px', 
+                          border: '1px solid #e5e7eb', 
+                          background: '#f9fafb', 
+                          color: '#9ca3af', 
+                          fontWeight: 500,
+                          cursor: 'default' 
+                        }}
+                      >
+                        Completed
+                      </button>
                     ) : (
-                      <Link className="evaluate-btn" to={`/teacher/peer-evaluations/${ev.id}`}>
-                        Start Evaluation
+                      <Link to={`/teacher/peer-evaluations/${ev.id}`} style={{ display: 'block', textDecoration: 'none', width: '100%', marginTop: '16px' }}>
+                        <button 
+                          style={{ 
+                            width: '100%', 
+                            padding: '8px', 
+                            borderRadius: '8px', 
+                            border: 'none', 
+                            background: '#3b82f6', 
+                            color: 'white', 
+                            fontWeight: 600, 
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.background = '#2563eb'}
+                          onMouseOut={(e) => e.target.style.background = '#3b82f6'}
+                        >
+                          Start Evaluation
+                        </button>
                       </Link>
-                    )}
-                  </div>
-                  
-                  <div className="academic-badge">
-                    {ev.academic_year} • {ev.semester}
-                  </div>
-                </div>
-              </div>
-            ))}
+                    )
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>

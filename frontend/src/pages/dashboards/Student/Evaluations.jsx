@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../../../services/api';
+import StyledCard from '../../../components/Common/StyledCard';
 import { useErrorHandling, useSubmissionErrorHandling } from '../../../hooks/useErrorHandling';
 import ErrorAlert from '../../../components/ErrorHandling/ErrorAlert';
 import LoadingSpinner from '../../../components/ErrorHandling/LoadingSpinner';
@@ -834,11 +835,12 @@ function StudentEvaluations() {
       <div
         className="evaluations-grid"
         style={{
-          maxWidth: 860,
+          maxWidth: 1200,
           margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: '1fr',
-          gap: 12
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 24,
+          padding: '24px 0'
         }}
       >
         {isLoading('load_evaluations') ? (
@@ -850,122 +852,97 @@ function StudentEvaluations() {
             <div className="empty-icon">📝</div>
             <h3>No Evaluations Available</h3>
             <p>There are no open evaluations for your courses at this time.</p>
-            {/* Debug info panel removed per UX request */}
           </div>
         ) : (
           evaluations.map((evaluation) => {
             const studentDbId = typeof window !== 'undefined' ? Number(localStorage.getItem('student_db_id')) : null;
-            // Use enhanced submission status with fallback to existing logic
             const submissionStatus = submissionStatuses[evaluation.id];
             const feedbackSubmission = (evaluation?.feedbacks || []).find(fb => Number(fb.student_id) === studentDbId);
             const isSubmitted = submissionStatus?.has_submitted || !!feedbackSubmission;
             
-            // Debug logging for this specific evaluation
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`Evaluation ${evaluation.id} submission check:`, {
-                studentDbId,
-                submissionStatus,
-                feedbackSubmission,
-                isSubmitted,
-                feedbacks: evaluation.feedbacks?.map(fb => ({ id: fb.id, student_id: fb.student_id }))
-              });
-            }
-            
-            // Use date utility functions for availability determination
             const currentDate = getCurrentDateString();
             const evaluationAvailable = isEvaluationAvailable(evaluation.opened_at, evaluation.closed_at, currentDate);
             const isClosed = evaluation.closed_at && !isEvaluationAvailable(evaluation.opened_at, evaluation.closed_at, currentDate) && 
-                            isEvaluationAvailable(evaluation.opened_at, null, currentDate); // Has opened but is now closed
-            const isNotYetOpen = !isEvaluationAvailable(evaluation.opened_at, null, currentDate); // Has not opened yet
+                            isEvaluationAvailable(evaluation.opened_at, null, currentDate);
+            const isNotYetOpen = !isEvaluationAvailable(evaluation.opened_at, null, currentDate);
             
+            const statusColor = isSubmitted ? '#10b981' : (evaluationAvailable ? '#3b82f6' : (isClosed ? '#ef4444' : '#6b7280'));
+            const statusBg = isSubmitted ? '#d1fae5' : (evaluationAvailable ? '#dbeafe' : (isClosed ? '#fee2e2' : '#f3f4f6'));
+            const statusText = isSubmitted ? 'Submitted' : (evaluationAvailable ? 'Open' : (isClosed ? 'Closed' : 'Upcoming'));
+
             return (
-              <div
+              <StyledCard
                 key={evaluation.id}
-                className="ui-card evaluation-card"
-                role="button"
-                tabIndex={evaluationAvailable && !isSubmitted ? 0 : -1}
+                icon={
+                  evaluation.teacher?.photo_url ? (
+                    <img 
+                      src={evaluation.teacher.photo_url} 
+                      alt={evaluation.teacher?.name} 
+                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                    />
+                  ) : (
+                    (evaluation.teacher?.name || 'U').charAt(0).toUpperCase()
+                  )
+                }
+                iconBgColor={statusBg}
+                iconColor={statusColor}
+                title={evaluation.course?.title || 'Course Evaluation'}
+                subtitle={evaluation.course?.code || 'N/A'}
+                timestamp={`AY ${evaluation.academic_year}`}
+                description={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Instructor: {evaluation.teacher?.name || 'N/A'}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                      {evaluation.closed_at ? (
+                         `${formatDateForDisplay(evaluation.opened_at)} – ${formatDateForDisplay(evaluation.closed_at)}`
+                      ) : (
+                         `Opens ${formatDateForDisplay(evaluation.opened_at)}`
+                      )}
+                    </div>
+                  </div>
+                }
                 onClick={() => {
                   if (!isSubmitted && evaluationAvailable) {
                     openEval(evaluation.id);
                   }
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isSubmitted && evaluationAvailable) {
-                    openEval(evaluation.id);
-                  }
-                }}
-                style={{
-                  cursor: (!isSubmitted && evaluationAvailable) ? 'pointer' : 'default',
-                  padding: 8
-                }}
-              >
-                {/* Status Indicator Bar */}
-                <div className={`status-bar ${isSubmitted ? 'completed' : !evaluationAvailable ? 'closed' : 'open'}`}></div>
-
-                {/* Professional Header with Instructor Avatar */}
-                <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px 0' }}>
-                  <div className="teacher-avatar" style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: 'var(--neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 11 }}>
-                    {evaluation.teacher?.photo_url ? (
-                      <img src={evaluation.teacher.photo_url} alt={evaluation.teacher?.name || 'Instructor'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      (evaluation.teacher?.name || 'U')
-                        .split(' ')
-                        .map(n => n[0])
-                        .join('')
-                        .toUpperCase()
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className="course-code-chip" style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', background: 'var(--neutral-100)', border: '1px solid var(--border-soft)', borderRadius: 6, padding: '1px 6px' }}>
-                        {evaluation.course?.code || 'N/A'}
-                      </span>
-                      <span className="status-chip" style={{ fontSize: 11, fontWeight: 600, color: isSubmitted ? '#16a34a' : (!evaluationAvailable ? (isClosed ? '#ef4444' : '#a3a3a3') : '#3b82f6') }}>
-                        {isSubmitted ? '✅ Submitted' : !evaluationAvailable ? (isClosed ? '🔒 Closed' : '⏳ Upcoming') : '🟢 Open'}
-                      </span>
-                    </div>
-                    <h3 className="card-title" style={{ margin: '2px 0 0', fontSize: '0.95rem', lineHeight: 1.2 }}>
-                      {evaluation.course?.title || 'Course Evaluation'}
-                    </h3>
-                    <div className="instructor-row" style={{ marginTop: 0, fontSize: 12, color: 'var(--muted)' }}>
-                      <strong style={{ fontWeight: 600 }}>Instructor:</strong> {evaluation.teacher?.name || 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Description (single-row ultra compact) */}
-                <div className="card-description" style={{ padding: '6px 8px 8px', fontSize: 12 }}>
-                  <div className="meta-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-                    <span>{formatYearLevel(studentYearLevel)}</span>
-                    <span style={{ opacity: 0.6 }}>•</span>
-                    <span>{String(evaluation.semester || '').replace('Semester ', 'Sem ')}</span>
-                    <span style={{ opacity: 0.6 }}>•</span>
-                    <span>AY {evaluation.academic_year}</span>
-                    <span style={{ opacity: 0.6 }}>•</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 11 }}>📆</span>
-                      {evaluation.closed_at ? (
-                        <>
-                          {formatDateForDisplay(evaluation.opened_at)} – {formatDateForDisplay(evaluation.closed_at)}
-                        </>
-                      ) : (
-                        <>Opens {formatDateForDisplay(evaluation.opened_at)}</>
-                      )}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Compact Status Footer (replaces large button) */}
-                <div className="card-footer" style={{ padding: '6px 8px 8px', fontSize: 12 }}>
-                  {isSubmitted ? (
-                    <span className="status-chip" style={{ fontWeight: 600, color: '#16a34a', fontSize: 12 }}>✅ Already Submitted</span>
-                  ) : !evaluationAvailable ? (
-                    <span className="status-chip" style={{ fontWeight: 600, color: '#a3a3a3', fontSize: 12 }}>{isClosed ? 'Evaluation Closed' : 'Not Available Yet'}</span>
-                  ) : (
-                    <span className="status-chip" style={{ fontWeight: 600, color: '#3b82f6', fontSize: 12 }}>Open</span>
-                  )}
-                </div>
-              </div>
+                status={
+                  <span style={{ 
+                    padding: '4px 12px', 
+                    borderRadius: '20px', 
+                    fontSize: '12px', 
+                    fontWeight: 600,
+                    backgroundColor: statusBg,
+                    color: statusColor
+                  }}>
+                    {statusText}
+                  </span>
+                }
+                footer={
+                  <button 
+                    className={`btn-primary ${!evaluationAvailable || isSubmitted ? 'disabled' : ''}`}
+                    style={{
+                      width: '100%',
+                      marginTop: '12px',
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: isSubmitted ? '#10b981' : (evaluationAvailable ? '#3b82f6' : '#9ca3af'),
+                      color: 'white',
+                      fontWeight: 600,
+                      cursor: (!isSubmitted && evaluationAvailable) ? 'pointer' : 'not-allowed',
+                      opacity: (!isSubmitted && evaluationAvailable) ? 1 : 0.7
+                    }}
+                    disabled={isSubmitted || !evaluationAvailable}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isSubmitted && evaluationAvailable) openEval(evaluation.id);
+                    }}
+                  >
+                    {isSubmitted ? 'Completed' : (evaluationAvailable ? 'Start Evaluation' : statusText)}
+                  </button>
+                }
+              />
             );
           })
         )}
