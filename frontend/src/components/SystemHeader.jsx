@@ -188,7 +188,7 @@ function SystemHeader({ theme, onToggleTheme }) {
               <i className="bi bi-square" />
             )}
           </span>
-          <span className="system-brand-text">Informatics College • Feedback & Evaluation</span>
+          <span className="system-brand-text">Computing and Informatics • Feedback & Evaluation</span>
         </Link>
 
         {!isLoggedIn && (

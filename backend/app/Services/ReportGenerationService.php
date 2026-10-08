@@ -12,6 +12,8 @@ use App\Models\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class ReportGenerationService
 {
@@ -479,11 +481,26 @@ class ReportGenerationService
 
         $htmlContent = $this->generateHTMLContent($reportData);
         
-        // For now, we'll save as HTML until PDF library is properly installed
-        // This would be replaced with actual PDF generation using DomPDF
-        Storage::put(str_replace('.pdf', '.html', $filepath), $htmlContent);
+        // Configure Dompdf
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'Arial');
+
+        // Instantiate Dompdf with our options
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($htmlContent);
+
+        // (Optional) Setup the paper size and orientation
+        $dompdf->setPaper('A4', 'portrait');
+
+        // Render the HTML as PDF
+        $dompdf->render();
         
-        return str_replace('.pdf', '.html', $filepath);
+        // Save the PDF to storage
+        Storage::put($filepath, $dompdf->output());
+        
+        return $filepath;
     }
 
     /**
@@ -709,6 +726,42 @@ class ReportGenerationService
             $html .= '<div class="section">';
             $html .= '<h2>Performance Visualization</h2>';
             $html .= '<div class="chart-placeholder">Chart showing rating distribution and trends would appear here</div>';
+            $html .= '</div>';
+        } elseif ($reportData['report_type'] === 'department_summary') {
+            // Department report HTML
+            $html .= '<div class="section">';
+            $html .= '<h2>Department Information</h2>';
+            $html .= '<table class="info-table">';
+            $html .= '<tr><th>Department</th><td>' . $reportData['department_info']['name'] . '</td></tr>';
+            $html .= '<tr><th>Total Teachers</th><td>' . $reportData['department_info']['total_teachers'] . '</td></tr>';
+            $html .= '<tr><th>Total Courses</th><td>' . $reportData['department_info']['total_courses'] . '</td></tr>';
+            $html .= '</table>';
+            $html .= '</div>';
+
+            $html .= '<div class="section">';
+            $html .= '<h2>Department Statistics</h2>';
+            $html .= '<div class="stats">';
+            $html .= '<div class="stat-card"><div class="stat-value">' . $reportData['department_statistics']['total_evaluations'] . '</div><div>Total Evaluations</div></div>';
+            $html .= '<div class="stat-card"><div class="stat-value">' . round($reportData['department_statistics']['average_participation_rate'], 1) . '%</div><div>Avg Participation</div></div>';
+            $html .= '<div class="stat-card"><div class="stat-value">' . round($reportData['department_statistics']['average_performance_score'], 1) . '%</div><div>Avg Performance</div></div>';
+            $html .= '</div>';
+            $html .= '</div>';
+
+            $html .= '<div class="section">';
+            $html .= '<h2>Teacher Performances</h2>';
+            $html .= '<table class="info-table">';
+            $html .= '<thead><tr><th>Teacher</th><th>Course</th><th>Score</th><th>Rating</th><th>Participation</th></tr></thead>';
+            $html .= '<tbody>';
+            foreach ($reportData['teacher_performances'] as $performance) {
+                $html .= '<tr>';
+                $html .= '<td>' . $performance['teacher_name'] . '</td>';
+                $html .= '<td>' . $performance['course_code'] . '</td>';
+                $html .= '<td>' . $performance['performance_score'] . '%</td>';
+                $html .= '<td>' . $performance['average_rating'] . '</td>';
+                $html .= '<td>' . $performance['participation_rate'] . '%</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table>';
             $html .= '</div>';
         }
 
@@ -1373,10 +1426,26 @@ class ReportGenerationService
 
         $htmlContent = $this->generateDepartmentHTMLContent($reportData);
         
-        // For now, we'll save as HTML until PDF library is properly installed
-        Storage::put(str_replace('.pdf', '.html', $filepath), $htmlContent);
+        // Configure Dompdf
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'Arial');
+
+        // Instantiate Dompdf with our options
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($htmlContent);
+
+        // (Optional) Setup the paper size and orientation
+        $dompdf->setPaper('A4', 'landscape'); // Use landscape for department reports to fit tables better
+
+        // Render the HTML as PDF
+        $dompdf->render();
         
-        return str_replace('.pdf', '.html', $filepath);
+        // Save the PDF to storage
+        Storage::put($filepath, $dompdf->output());
+        
+        return $filepath;
     }
 
     /**

@@ -268,6 +268,7 @@ class DepartmentController extends Controller
      */
     public function export(Request $request, Department $department)
     {
+        \Log::info('Department export requested', ['department_id' => $department->id, 'format' => $request->input('format')]);
         try {
             $data = $request->validate([
                 'format' => 'required|in:csv,pdf,excel',

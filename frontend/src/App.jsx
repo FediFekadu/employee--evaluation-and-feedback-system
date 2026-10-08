@@ -300,7 +300,7 @@ function App() {
         {showFooter && (
           <footer className="footer">
             <div className="container">
-              <span>© {new Date().getFullYear()} Informatics College. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} Computing and Informatics. All rights reserved.</span>
             </div>
           </footer>
         )}

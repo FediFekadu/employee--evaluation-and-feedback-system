@@ -714,6 +714,7 @@ class EvaluationController extends Controller
      */
     public function export(Request $request, Evaluation $evaluation)
     {
+        \Log::info('Evaluation export requested', ['evaluation_id' => $evaluation->id, 'format' => $request->input('format')]);
         try {
             // Enhanced validation with detailed error messages
             $data = $request->validate([

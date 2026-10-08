@@ -70,7 +70,7 @@ Route::put('/evaluations/{evaluation}/questions', [EvaluationController::class, 
 Route::get('/evaluations/{evaluation}/submission-status', [EvaluationController::class, 'submissionStatus']);
 Route::get('/evaluations/{evaluation}/analytics', [EvaluationController::class, 'analytics']);
 Route::get('/evaluations/{evaluation}/results', [EvaluationController::class, 'results']);
-Route::post('/evaluations/{evaluation}/export', [EvaluationController::class, 'export']);
+Route::post('/evaluations/{evaluation}/download-report', [EvaluationController::class, 'export']);
 // List comments for teacher view (per evaluation/course)
 Route::get('/evaluations/{evaluation}/comments', [FeedbackController::class, 'comments']);
 
@@ -109,7 +109,7 @@ Route::post('/departments', [DepartmentController::class, 'store']);
 Route::put('/departments/{department}', [DepartmentController::class, 'update']);
 Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
 Route::post('/departments/{department}/assign-admin', [DepartmentController::class, 'assignAdmin']);
-Route::post('/departments/{department}/export', [DepartmentController::class, 'export']);
+Route::post('/departments/{department}/download-report', [DepartmentController::class, 'export']);
 // Department comments
 Route::post('/departments/{department}/comments', [DepartmentCommentController::class, 'store']);
 Route::get('/departments/{department}/comments', [DepartmentCommentController::class, 'index']);

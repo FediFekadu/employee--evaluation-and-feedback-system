@@ -56,7 +56,11 @@ function DepartmentInstructors() {
       if (newInstructor.title) fd.append('title', newInstructor.title);
       fd.append('department_id', String(deptId));
       if (photoFile) fd.append('photo', photoFile);
-      const res = await api.post('/teachers', fd);
+      const res = await api.post('/teachers', fd, {
+        headers: {
+          'Content-Type': undefined,
+        },
+      });
       setDepartment((prev) => ({
         ...prev,
         teachers: [res.data, ...(prev?.teachers || [])],

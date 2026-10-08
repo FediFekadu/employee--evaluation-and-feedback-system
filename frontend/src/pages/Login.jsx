@@ -213,7 +213,7 @@ function Login() {
             ← Back to Home
           </Link>
           <p className="footer-text">
-            Informatics College Evaluation System
+            Computing and Informatics Evaluation System
           </p>
         </div>
       </div>

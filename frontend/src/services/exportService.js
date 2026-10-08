@@ -57,7 +57,7 @@ class ExportService {
 
       // Make API request with timeout and progress tracking
       const response = await this._makeExportRequest(
-        `/evaluations/${evaluationId}/export`,
+        `/evaluations/${evaluationId}/download-report`,
         requestData,
         onProgress
       );
@@ -158,7 +158,7 @@ class ExportService {
 
       // Make API request
       const response = await this._makeExportRequest(
-        `/departments/${departmentId}/export`,
+        `/departments/${departmentId}/download-report`,
         requestData,
         onProgress
       );

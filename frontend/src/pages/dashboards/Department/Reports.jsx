@@ -62,7 +62,7 @@ const Reports = () => {
   const handleExport = async (format = 'pdf') => {
     try {
       setExporting(true);
-      const response = await api.post(`/departments/${id}/export`, {
+      const response = await api.post(`/departments/${id}/download-report`, {
         format: format,
         evaluations: evaluationIds
       }, {
