@@ -1,4 +1,4 @@
-# 🎓 Student Feedback and Teacher Evaluation System
+# 🎓Employee evaluation and Feedback System
 
 A comprehensive, role-based feedback and evaluation system designed for Bulehora University's Informatics College. This system streamlines the process of collecting student feedback, conducting teacher evaluations, and generating insightful reports while maintaining data privacy and security.
 
