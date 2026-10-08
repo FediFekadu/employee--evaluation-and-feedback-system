@@ -474,16 +474,4 @@ Each role has its own dashboard:
 
 ---
 
-## ✅ **FINAL MESSAGE TO AI**
-
-**Now generate the full project documentation, database schema, APIs, architecture, and code samples based on the system requirements above. Make it long, structured, detailed and professional.**
-
----
-
-If you want, I can now **generate the full documentation for you**, or I can **generate the PDF directly**.
-
-Just tell me:
-
-👉 **“Generate full documentation now”**
-or
-👉 **“Generate 20+ page PDF now”**
+## ✅ 
